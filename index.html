@@ -1,56 +1,793 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-    .glow { box-shadow: 0 0 20px rgba(0, 245, 255, 0.3); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>JUNAF | AI Content Growth System</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:
+"Inter",
+"PingFang SC",
+"Microsoft YaHei",
+sans-serif;
+}
+
+
+body{
+
+background:#050505;
+color:white;
+
+}
+
+
+/* HERO */
+
+.hero{
+
+height:100vh;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+text-align:center;
+
+background:
+radial-gradient(circle at top right,#333,#050505 45%);
+
+padding:40px;
+
+}
+
+
+.logo{
+
+font-size:80px;
+
+letter-spacing:18px;
+
+font-weight:900;
+
+}
+
+
+.subtitle{
+
+margin-top:20px;
+
+font-size:18px;
+
+letter-spacing:6px;
+
+color:#c8a96b;
+
+}
+
+
+.hero h1{
+
+font-size:58px;
+
+margin-top:40px;
+
+}
+
+
+.hero p{
+
+font-size:22px;
+
+margin-top:30px;
+
+color:#ccc;
+
+}
+
+
+
+.btn{
+
+display:inline-block;
+
+margin-top:50px;
+
+padding:18px 50px;
+
+border-radius:50px;
+
+background:#c8a96b;
+
+color:#000;
+
+font-weight:bold;
+
+}
+
+
+
+/* SECTION */
+
+
+section{
+
+padding:100px 8%;
+
+}
+
+
+.title{
+
+text-align:center;
+
+font-size:42px;
+
+margin-bottom:60px;
+
+}
+
+
+.title span{
+
+color:#c8a96b;
+
+}
+
+
+
+/* SYSTEM */
+
+
+.system-grid{
+
+display:grid;
+
+grid-template-columns:
+repeat(3,1fr);
+
+gap:30px;
+
+}
+
+
+
+.card{
+
+background:
+linear-gradient(
+145deg,
+#161616,
+#090909
+);
+
+border:1px solid #333;
+
+padding:40px;
+
+border-radius:20px;
+
+transition:.3s;
+
+}
+
+
+.card:hover{
+
+transform:translateY(-10px);
+
+border-color:#c8a96b;
+
+}
+
+
+
+.card h3{
+
+font-size:24px;
+
+margin-bottom:20px;
+
+}
+
+
+
+.card p{
+
+color:#aaa;
+
+line-height:2;
+
+}
+
+
+
+/* PROCESS */
+
+
+.process{
+
+display:flex;
+
+justify-content:center;
+
+gap:30px;
+
+flex-wrap:wrap;
+
+}
+
+
+.step{
+
+width:220px;
+
+padding:30px;
+
+background:#111;
+
+border-radius:20px;
+
+text-align:center;
+
+}
+
+
+
+.step strong{
+
+font-size:40px;
+
+color:#c8a96b;
+
+}
+
+
+
+
+/* PACKAGE */
+
+
+.package{
+
+display:grid;
+
+grid-template-columns:
+repeat(3,1fr);
+
+gap:30px;
+
+}
+
+
+.price{
+
+background:#111;
+
+padding:40px;
+
+border-radius:20px;
+
+}
+
+
+.price h3{
+
+font-size:28px;
+
+}
+
+
+.price ul{
+
+margin-top:20px;
+
+line-height:2.2;
+
+color:#bbb;
+
+}
+
+
+
+/* CTA */
+
+
+.cta{
+
+text-align:center;
+
+background:
+linear-gradient(
+180deg,
+#111,
+#000
+);
+
+}
+
+
+
+.cta h2{
+
+font-size:45px;
+
+}
+
+
+footer{
+
+padding:40px;
+
+text-align:center;
+
+color:#777;
+
+}
+
+
+
+@media(max-width:900px){
+
+.hero h1{
+
+font-size:36px;
+
+}
+
+.logo{
+
+font-size:50px;
+
+}
+
+
+.system-grid,
+.package{
+
+grid-template-columns:1fr;
+
+}
+
+}
+
+
+
+</style>
+
+
 </head>
-<body class="bg-[#0a0a0b] text-white overflow-hidden">
 
-  <nav class="flex justify-between items-center px-8 py-6 opacity-60">
-    <div class="text-xl font-bold tracking-tighter">JUNAF</div>
-    <div class="text-sm tracking-widest uppercase">Stealth Mode</div>
-  </nav>
 
-  <main class="relative flex flex-col items-center justify-center min-h-[80vh] px-4 text-center">
-    
-    <div class="absolute w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] -z-10"></div>
+<body>
 
-    <h1 class="text-6xl md:text-8xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500">
-      Intelligence, <br>
-      <span class="italic font-light">distilled.</span>
-    </h1>
 
-    <p class="max-w-xl text-gray-400 text-lg md:text-xl font-light leading-relaxed mb-10">
-      The next-generation operating layer for complex systems. 
-      Junaf strips away the friction of legacy architecture.
-    </p>
 
-    <div class="flex flex-col md:flex-row items-center gap-4">
-      <input 
-        type="email" 
-        placeholder="Enter your work email" 
-        class="bg-white/5 border border-white/10 px-6 py-3 rounded-full w-72 focus:outline-none focus:border-cyan-400/50 transition-all text-sm"
-      >
-      <button class="bg-white text-black px-8 py-3 rounded-full font-semibold text-sm hover:bg-cyan-400 transition-all duration-300 glow">
-        Request Access
-      </button>
-    </div>
+<!-- HERO -->
 
-    <div class="mt-16">
-      <a href="#" class="text-xs uppercase tracking-[0.3em] text-gray-600 hover:text-cyan-400 transition-colors">
-        Read the Manifesto →
-      </a>
-    </div>
+<div class="hero">
 
-  </main>
 
-  <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-cyan-500/5 to-transparent border-b border-white/5"></div>
+<div>
+
+
+<div class="logo">
+JUNAF
+</div>
+
+
+<div class="subtitle">
+AI CONTENT GROWTH SYSTEM
+</div>
+
+
+
+<h1>
+
+AI时代企业内容增长系统
+
+</h1>
+
+
+<p>
+
+从内容生产，到商业增长<br>
+打造企业短视频获客系统
+
+</p>
+
+
+
+<a class="btn">
+
+开启企业增长
+
+</a>
+
+
+</div>
+
+</div>
+
+
+
+
+
+
+<!-- SYSTEM -->
+
+<section>
+
+
+<h2 class="title">
+
+JUNAF 六大<span>增长系统</span>
+
+</h2>
+
+
+
+<div class="system-grid">
+
+
+<div class="card">
+
+<h3>
+01 品牌智能定位系统
+</h3>
+
+<p>
+
+品牌定位<br>
+用户画像<br>
+企业IP设计<br>
+爆款内容规划<br>
+品牌故事体系
+
+</p>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+02 内容生产系统
+</h3>
+
+<p>
+
+商业视频拍摄<br>
+AI智能创作<br>
+脚本策划<br>
+剪辑包装<br>
+内容资产库
+
+</p>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+03 企业IP增长系统
+</h3>
+
+<p>
+
+老板IP打造<br>
+专家型IP<br>
+人格化内容<br>
+长期内容路线
+
+</p>
+
+</div>
+
+
+
+
+
+<div class="card">
+
+<h3>
+04 全域内容分发系统
+</h3>
+
+<p>
+
+抖音<br>
+视频号<br>
+小红书<br>
+快手<br>
+B站<br>
+微博矩阵
+
+</p>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+05 数据增长系统
+</h3>
+
+<p>
+
+数据分析<br>
+爆款优化<br>
+流量增长<br>
+投放策略
+
+</p>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+06 商业成交系统
+</h3>
+
+<p>
+
+企业获客<br>
+私域运营<br>
+直播增长<br>
+商业转化
+
+</p>
+
+</div>
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+<!-- PROCESS -->
+
+
+<section>
+
+
+<h2 class="title">
+
+内容增长<span>全流程</span>
+
+</h2>
+
+
+
+<div class="process">
+
+
+<div class="step">
+
+<strong>01</strong>
+
+<br>
+品牌分析
+
+</div>
+
+
+<div class="step">
+
+<strong>02</strong>
+
+<br>
+内容策划
+
+</div>
+
+
+<div class="step">
+
+<strong>03</strong>
+
+<br>
+视频生产
+
+</div>
+
+
+<div class="step">
+
+<strong>04</strong>
+
+<br>
+矩阵发布
+
+</div>
+
+
+<div class="step">
+
+<strong>05</strong>
+
+<br>
+数据优化
+
+</div>
+
+
+<div class="step">
+
+<strong>06</strong>
+
+<br>
+商业增长
+
+</div>
+
+
+
+</div>
+
+</section>
+
+
+
+
+
+<!-- PACKAGE -->
+
+
+<section>
+
+
+<h2 class="title">
+
+JUNAF 服务<span>体系</span>
+
+</h2>
+
+
+<div class="package">
+
+
+<div class="price">
+
+<h3>
+Starter
+</h3>
+
+<p>
+企业启动版
+</p>
+
+<ul>
+
+<li>品牌定位</li>
+<li>账号搭建</li>
+<li>基础内容生产</li>
+
+</ul>
+
+</div>
+
+
+
+<div class="price">
+
+<h3>
+Growth
+</h3>
+
+<p>
+企业增长版
+</p>
+
+<ul>
+
+<li>月度内容规划</li>
+<li>视频持续生产</li>
+<li>IP打造</li>
+<li>数据优化</li>
+
+</ul>
+
+</div>
+
+
+
+<div class="price">
+
+<h3>
+Enterprise
+</h3>
+
+<p>
+企业生态版
+</p>
+
+<ul>
+
+<li>企业内容OS</li>
+<li>AI生产体系</li>
+<li>全平台矩阵</li>
+<li>商业增长</li>
+
+</ul>
+
+</div>
+
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+<!-- CTA -->
+
+
+<section class="cta">
+
+
+<h2>
+
+让内容成为企业增长引擎
+
+</h2>
+
+
+<p>
+
+JUNAF
+<br>
+AI时代企业内容增长伙伴
+
+</p>
+
+
+</section>
+
+
+
+
+<footer>
+
+易光文化旗下品牌
+<br>
+JUNAF · MusicAMC
+
+</footer>
+
+
+
 
 </body>
+
 </html>
