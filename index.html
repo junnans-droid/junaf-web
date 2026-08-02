@@ -4,157 +4,230 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>JUNAF | AI Content Growth System</title>
+<title>JUNAF | Exploring New Sound Systems of the Universe</title>
+
+<meta name="description" content="JUNAF is a future sound exploration system created by Son Ye. Exploring AI, Human Emotion and Cosmic Sound.">
 
 <style>
 
 *{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:
-"Inter",
-"PingFang SC",
-"Microsoft YaHei",
-sans-serif;
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
 }
-
 
 body{
 
-background:#050505;
-color:white;
+    background:#050505;
+    color:#ffffff;
+    font-family:
+    "Helvetica Neue",
+    Arial,
+    "PingFang SC",
+    sans-serif;
 
+    overflow-x:hidden;
 }
 
 
-/* HERO */
+/* 星空背景 */
 
-.hero{
+body::before{
 
-height:100vh;
+    content:"";
+    position:fixed;
+    width:100%;
+    height:100%;
 
-display:flex;
+    background:
+    radial-gradient(circle at 30% 30%,rgba(80,80,255,.15),transparent 35%),
+    radial-gradient(circle at 70% 60%,rgba(0,255,255,.08),transparent 30%);
 
-align-items:center;
+    z-index:-1;
+}
 
-justify-content:center;
 
-text-align:center;
 
-background:
-radial-gradient(circle at top right,#333,#050505 45%);
+/* 导航 */
 
-padding:40px;
+nav{
+
+    position:fixed;
+    top:0;
+    width:100%;
+
+    padding:30px 8%;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    backdrop-filter:blur(10px);
 
 }
 
 
 .logo{
 
-font-size:80px;
-
-letter-spacing:18px;
-
-font-weight:900;
+    font-size:28px;
+    letter-spacing:8px;
+    font-weight:700;
 
 }
 
 
-.subtitle{
+nav a{
 
-margin-top:20px;
+    color:#aaa;
+    text-decoration:none;
+    margin-left:35px;
 
-font-size:18px;
+    font-size:14px;
 
-letter-spacing:6px;
+}
 
-color:#c8a96b;
+
+nav a:hover{
+
+    color:white;
+
+}
+
+
+
+/* Hero */
+
+.hero{
+
+    height:100vh;
+
+    display:flex;
+    flex-direction:column;
+
+    justify-content:center;
+    align-items:center;
+
+    text-align:center;
+
+    padding:0 20px;
 
 }
 
 
 .hero h1{
 
-font-size:58px;
+    font-size:100px;
 
-margin-top:40px;
+    letter-spacing:25px;
+
+    font-weight:800;
 
 }
+
+
+.hero h2{
+
+    margin-top:30px;
+
+    font-size:22px;
+
+    letter-spacing:6px;
+
+    color:#ccc;
+
+}
+
 
 
 .hero p{
 
-font-size:22px;
+    margin-top:30px;
 
-margin-top:30px;
+    max-width:700px;
 
-color:#ccc;
+    line-height:2;
 
-}
-
-
-
-.btn{
-
-display:inline-block;
-
-margin-top:50px;
-
-padding:18px 50px;
-
-border-radius:50px;
-
-background:#c8a96b;
-
-color:#000;
-
-font-weight:bold;
+    color:#888;
 
 }
 
 
 
-/* SECTION */
+.button{
+
+    margin-top:50px;
+
+    padding:16px 45px;
+
+    border:1px solid #555;
+
+    border-radius:50px;
+
+    color:white;
+
+    text-decoration:none;
+
+    transition:.3s;
+
+}
 
 
-section{
+.button:hover{
 
-padding:100px 8%;
+    background:white;
+    color:black;
+
+}
+
+
+
+/* 内容区 */
+
+.section{
+
+    padding:120px 10%;
 
 }
 
 
 .title{
 
-text-align:center;
+    font-size:40px;
 
-font-size:42px;
+    letter-spacing:5px;
 
-margin-bottom:60px;
-
-}
-
-
-.title span{
-
-color:#c8a96b;
+    margin-bottom:40px;
 
 }
 
 
 
-/* SYSTEM */
+.text{
+
+    color:#aaa;
+
+    line-height:2;
+
+    max-width:900px;
+
+    font-size:18px;
+
+}
 
 
-.system-grid{
 
-display:grid;
+/* Grid */
 
-grid-template-columns:
-repeat(3,1fr);
 
-gap:30px;
+.grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+
+    gap:30px;
+
+    margin-top:50px;
 
 }
 
@@ -162,29 +235,13 @@ gap:30px;
 
 .card{
 
-background:
-linear-gradient(
-145deg,
-#161616,
-#090909
-);
+    border:1px solid #222;
 
-border:1px solid #333;
+    padding:40px;
 
-padding:40px;
+    min-height:220px;
 
-border-radius:20px;
-
-transition:.3s;
-
-}
-
-
-.card:hover{
-
-transform:translateY(-10px);
-
-border-color:#c8a96b;
+    background:rgba(255,255,255,.02);
 
 }
 
@@ -192,9 +249,9 @@ border-color:#c8a96b;
 
 .card h3{
 
-font-size:24px;
+    font-size:24px;
 
-margin-bottom:20px;
+    margin-bottom:20px;
 
 }
 
@@ -202,540 +259,194 @@ margin-bottom:20px;
 
 .card p{
 
-color:#aaa;
+    color:#888;
 
-line-height:2;
-
-}
-
-
-
-/* PROCESS */
-
-
-.process{
-
-display:flex;
-
-justify-content:center;
-
-gap:30px;
-
-flex-wrap:wrap;
-
-}
-
-
-.step{
-
-width:220px;
-
-padding:30px;
-
-background:#111;
-
-border-radius:20px;
-
-text-align:center;
+    line-height:1.8;
 
 }
 
 
 
-.step strong{
-
-font-size:40px;
-
-color:#c8a96b;
-
-}
-
-
-
-
-/* PACKAGE */
-
-
-.package{
-
-display:grid;
-
-grid-template-columns:
-repeat(3,1fr);
-
-gap:30px;
-
-}
-
-
-.price{
-
-background:#111;
-
-padding:40px;
-
-border-radius:20px;
-
-}
-
-
-.price h3{
-
-font-size:28px;
-
-}
-
-
-.price ul{
-
-margin-top:20px;
-
-line-height:2.2;
-
-color:#bbb;
-
-}
-
-
-
-/* CTA */
-
-
-.cta{
-
-text-align:center;
-
-background:
-linear-gradient(
-180deg,
-#111,
-#000
-);
-
-}
-
-
-
-.cta h2{
-
-font-size:45px;
-
-}
+/* Footer */
 
 
 footer{
 
-padding:40px;
+    padding:60px;
 
-text-align:center;
+    text-align:center;
 
-color:#777;
+    color:#666;
 
-}
-
-
-
-@media(max-width:900px){
-
-.hero h1{
-
-font-size:36px;
+    font-size:14px;
 
 }
 
-.logo{
-
-font-size:50px;
-
-}
-
-
-.system-grid,
-.package{
-
-grid-template-columns:1fr;
-
-}
-
-}
 
 
 
 </style>
 
-
 </head>
+
 
 
 <body>
 
 
-
-<!-- HERO -->
-
-<div class="hero">
-
-
-<div>
-
+<nav>
 
 <div class="logo">
 JUNAF
 </div>
 
 
-<div class="subtitle">
-AI CONTENT GROWTH SYSTEM
+<div>
+
+<a href="#universe">Universe</a>
+
+<a href="#live">Live</a>
+
+<a href="#studio">Studio</a>
+
+<a href="#archive">Archive</a>
+
+<a href="#about">About</a>
+
 </div>
 
 
+</nav>
+
+
+
+<section class="hero">
+
 
 <h1>
-
-AI时代企业内容增长系统
-
+JUNAF
 </h1>
+
+
+<h2>
+EXPLORING NEW SOUND SYSTEMS OF THE UNIVERSE
+</h2>
+
 
 
 <p>
 
-从内容生产，到商业增长<br>
-打造企业短视频获客系统
+A future sound exploration project created by Son Ye.
+
+Exploring the relationship between human consciousness,
+artificial intelligence and the future of sound.
 
 </p>
 
 
 
-<a class="btn">
+<a class="button" href="#universe">
 
-开启企业增长
+ENTER JUNAF
 
 </a>
 
 
-</div>
-
-</div>
-
-
-
-
-
-
-<!-- SYSTEM -->
-
-<section>
-
-
-<h2 class="title">
-
-JUNAF 六大<span>增长系统</span>
-
-</h2>
-
-
-
-<div class="system-grid">
-
-
-<div class="card">
-
-<h3>
-01 品牌智能定位系统
-</h3>
-
-<p>
-
-品牌定位<br>
-用户画像<br>
-企业IP设计<br>
-爆款内容规划<br>
-品牌故事体系
-
-</p>
-
-</div>
-
-
-
-
-<div class="card">
-
-<h3>
-02 内容生产系统
-</h3>
-
-<p>
-
-商业视频拍摄<br>
-AI智能创作<br>
-脚本策划<br>
-剪辑包装<br>
-内容资产库
-
-</p>
-
-</div>
-
-
-
-
-<div class="card">
-
-<h3>
-03 企业IP增长系统
-</h3>
-
-<p>
-
-老板IP打造<br>
-专家型IP<br>
-人格化内容<br>
-长期内容路线
-
-</p>
-
-</div>
-
-
-
-
-
-<div class="card">
-
-<h3>
-04 全域内容分发系统
-</h3>
-
-<p>
-
-抖音<br>
-视频号<br>
-小红书<br>
-快手<br>
-B站<br>
-微博矩阵
-
-</p>
-
-</div>
-
-
-
-
-<div class="card">
-
-<h3>
-05 数据增长系统
-</h3>
-
-<p>
-
-数据分析<br>
-爆款优化<br>
-流量增长<br>
-投放策略
-
-</p>
-
-</div>
-
-
-
-
-<div class="card">
-
-<h3>
-06 商业成交系统
-</h3>
-
-<p>
-
-企业获客<br>
-私域运营<br>
-直播增长<br>
-商业转化
-
-</p>
-
-</div>
-
-
-</div>
-
-
 </section>
 
 
 
 
 
-
-<!-- PROCESS -->
-
-
-<section>
+<section class="section" id="universe">
 
 
 <h2 class="title">
 
-内容增长<span>全流程</span>
+Sound Universe
 
 </h2>
 
 
+<p class="text">
 
-<div class="process">
+JUNAF is not only music.
 
+It is a future sound system exploring
+human emotion,
+AI intelligence,
+cosmic frequency
+and new forms of listening.
 
-<div class="step">
-
-<strong>01</strong>
-
-<br>
-品牌分析
-
-</div>
-
-
-<div class="step">
-
-<strong>02</strong>
-
-<br>
-内容策划
-
-</div>
-
-
-<div class="step">
-
-<strong>03</strong>
-
-<br>
-视频生产
-
-</div>
-
-
-<div class="step">
-
-<strong>04</strong>
-
-<br>
-矩阵发布
-
-</div>
-
-
-<div class="step">
-
-<strong>05</strong>
-
-<br>
-数据优化
-
-</div>
-
-
-<div class="step">
-
-<strong>06</strong>
-
-<br>
-商业增长
-
-</div>
+</p>
 
 
 
-</div>
-
-</section>
+<div class="grid">
 
 
-
-
-
-<!-- PACKAGE -->
-
-
-<section>
-
-
-<h2 class="title">
-
-JUNAF 服务<span>体系</span>
-
-</h2>
-
-
-<div class="package">
-
-
-<div class="price">
+<div class="card">
 
 <h3>
-Starter
+JUNAF Live
 </h3>
 
 <p>
-企业启动版
+Immersive sound performance.
+AI + Human improvisation.
+Future electronic experience.
 </p>
 
-<ul>
-
-<li>品牌定位</li>
-<li>账号搭建</li>
-<li>基础内容生产</li>
-
-</ul>
 
 </div>
 
 
 
-<div class="price">
+<div class="card">
 
 <h3>
-Growth
+JUNAF Studio
 </h3>
 
 <p>
-企业增长版
+Original sound creation.
+Electronic music.
+AI music exploration.
 </p>
 
-<ul>
-
-<li>月度内容规划</li>
-<li>视频持续生产</li>
-<li>IP打造</li>
-<li>数据优化</li>
-
-</ul>
 
 </div>
 
 
 
-<div class="price">
+<div class="card">
 
 <h3>
-Enterprise
+JUNAF Healing
 </h3>
 
 <p>
-企业生态版
+Sound meditation.
+Frequency exploration.
+Human inner experience.
 </p>
 
-<ul>
 
-<li>企业内容OS</li>
-<li>AI生产体系</li>
-<li>全平台矩阵</li>
-<li>商业增长</li>
+</div>
 
-</ul>
+
+
+<div class="card">
+
+<h3>
+AI Sound System
+</h3>
+
+<p>
+Exploring the future relationship
+between humans and intelligent sound.
+</p>
+
 
 </div>
 
@@ -750,24 +461,105 @@ Enterprise
 
 
 
-<!-- CTA -->
+<section class="section" id="live">
 
 
-<section class="cta">
+<h2 class="title">
 
-
-<h2>
-
-让内容成为企业增长引擎
+JUNAF Live
 
 </h2>
 
 
-<p>
+<p class="text">
 
-JUNAF
-<br>
-AI时代企业内容增长伙伴
+Future sound performance system.
+
+Electronic music,
+sound healing,
+AI generated sound,
+and human live creation.
+
+</p>
+
+
+</section>
+
+
+
+
+
+
+<section class="section" id="studio">
+
+
+<h2 class="title">
+
+JUNAF Studio
+
+</h2>
+
+
+<p class="text">
+
+Creating original works
+and exploring new possibilities
+of sound in the AI era.
+
+</p>
+
+
+</section>
+
+
+
+
+
+
+
+<section class="section" id="archive">
+
+
+<h2 class="title">
+
+JUNAF Archive
+
+</h2>
+
+
+<p class="text">
+
+A digital archive of sound experiments,
+performances,
+research and future visions.
+
+</p>
+
+
+</section>
+
+
+
+
+
+
+<section class="section" id="about">
+
+
+<h2 class="title">
+
+Created by Son Ye
+
+</h2>
+
+
+<p class="text">
+
+Son Ye is a sound artist and creator.
+
+Through music,
+technology and artificial intelligence,
+he explores the future of human sound civilization.
 
 </p>
 
@@ -779,15 +571,17 @@ AI时代企业内容增长伙伴
 
 <footer>
 
-易光文化旗下品牌
+
+© 2026 JUNAF  
 <br>
-JUNAF · MusicAMC
+Future Sound Civilization Project
+
 
 </footer>
 
 
 
-
 </body>
+
 
 </html>
