@@ -34,7 +34,7 @@
       signal: AbortSignal.timeout(10000)
     });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw Error(data.message || '门店数据暂不可用');
+    if (!response.ok || !data.ok) throw Error(data.message || '音乐数据暂不可用');
     return data;
   }
   function showCheckout(order) {
@@ -97,8 +97,8 @@
     selectedOrder = null;
     $('#store-detail').hidden = false;
     $('#checkout').hidden = true;
-    $('#detail-name').textContent = store.name;
-    message('正在读取门店音乐数据…');
+    $('#detail-name').textContent = '我的音乐';
+    message('正在读取音乐数据…');
     try {
       const [state, orderData, catalogResponse] = await Promise.all([
         shop('/state', store.id), shop('/orders', store.id),
@@ -121,7 +121,7 @@
       renderRows('#device-list', state.devices, row => row.platform || row.channel || '设备',
         row => `${row.online ? '最近在线' : '离线'} · ${row.deviceId}`, '暂无连接设备');
       renderProducts(catalogResponse.products || []);
-      message('门店音乐数据已更新');
+      message('音乐数据已更新');
     } catch (error) { message(error.message); }
   }
   function renderAccount(data) {
@@ -140,7 +140,7 @@
       const name = document.createElement('strong');
       name.textContent = store.name;
       const role = document.createElement('span');
-      role.textContent = store.role === 'owner' ? '门店负责人' : '门店成员';
+      role.textContent = store.role === 'owner' ? '音乐权益所有者' : '音乐权益成员';
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = '查看音乐 →';
@@ -148,8 +148,9 @@
       card.append(number, name, role, button);
       list.append(card);
     }
-    if (!data.stores.length) list.textContent = '暂未关联门店';
-    message('已登录 JUNAF');
+    if (!data.stores.length) list.textContent = '音乐服务尚未开通';
+    if (data.stores.length === 1) showStore(data.stores[0]);
+    else message('已登录 JUNAF');
   }
   async function showSignedOut() {
     $('#signed-in').hidden = true;
