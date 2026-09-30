@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#171814">
+  <meta name="description" content="JUNAF Music：以声音构建新的空间与体验。">
+  <title>Music — JUNAF</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/music/music.css">
+</head>
+<body class="music-page">
+  <a class="skip" href="#main">跳至正文</a>
+  <header id="header">
+    <a class="brand" href="/">JUNAF<span>.</span></a>
+    <nav id="nav" aria-label="主导航">
+      <a href="/">首页</a><a href="/#language">设计语言</a>
+      <a href="/music/" aria-current="page">Music ↗</a><a href="/music/account/">门店中心</a><a href="/tools/">Tools ↗</a>
+    </nav>
+    <span class="header-note">ART / DESIGN / CONSTRUCTION</span>
+    <button id="menu" aria-controls="nav" aria-expanded="false">菜单</button>
+  </header>
+  <main id="main">
+    <section class="music-hero">
+      <div class="kicker"><span>JUNAF / MUSIC</span><span>声音构建计划 · 001</span></div>
+      <div class="music-hero-title"><span class="meta">SOUND AS A MATERIAL</span><h1>让声音<br><em>成为空间<span class="accent">。</span></em></h1></div>
+      <div class="music-hero-bottom"><p>从 MusicAMC 已验证的五阶段音乐结构出发，在 JUNAF 的语言里重新组织聆听。每一段声音，都有自己的进入方式。</p><a href="#library">探索音乐方案 ↘</a></div>
+      <div class="music-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+    </section>
+    <section class="music-intro"><div class="kicker"><span>01 / 声音系统</span><span>ONE STRUCTURE / FIVE STAGES</span></div><div><h2>一套结构，<br>五种状态。</h2><p>延续 MusicAMC 音乐包的五阶段逻辑：选择方案、进入阶段、试听声音。JUNAF 为它建立新的视觉秩序与独立服务。</p></div></section>
+    <section class="music-library" id="library">
+      <div class="kicker"><span>02 / 音乐方案</span><span>THE LIBRARY</span></div>
+      <div class="music-library-head"><h2>选择一个<br>声音现场。</h2><p id="library-status" role="status">正在连接 JUNAF 曲库…</p></div>
+      <div id="music-packs" class="music-packs" aria-live="polite"></div>
+    </section>
+    <section class="music-player" aria-label="音乐试听播放器">
+      <div><span class="meta">NOW LISTENING / JUNAF</span><strong id="player-title">选择一个阶段开始试听</strong></div>
+      <audio id="preview-player" controls preload="none"></audio>
+      <button id="stop-preview" type="button" aria-label="停止试听">停止 ×</button>
+    </section>
+  </main>
+  <footer><div><a class="footer-brand" href="/">JUNAF<span>.</span></a><p>未来需要一种新的语言。</p></div><div class="footer-links"><a href="/">首页</a><a href="/music/">Music</a><a href="/tools/">Tools</a></div><div class="meta">© 2026 JUNAF<br>ART / DESIGN / CONSTRUCTION</div></footer>
+  <script src="/site.js" defer></script><script src="/music/music.js" defer></script>
+</body>
+</html>
