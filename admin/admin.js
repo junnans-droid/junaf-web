@@ -8,8 +8,7 @@
     music: ['02 / MUSIC', '音乐方案', '查看曲库与商品的真实状态。发布与媒体上传将在音乐模块完善后接入。'],
     review: ['03 / PAYMENT REVIEW', '订单核款', '核对到账信息后，才能发放正式音乐权益。'],
     orders: ['04 / ORDERS', '订单查询', '按状态、订单号或交易尾号查找音乐订单。'],
-    stores: ['05 / STORES', '门店', '查看 JUNAF 门店及其负责人。'],
-    accounts: ['06 / ACCOUNTS', '账号', '查看独立的 JUNAF 账号，不包含密码或会话信息。'],
+    accounts: ['05 / USERS', '用户', '查看 JUNAF 用户，不包含密码或会话信息。'],
     video: ['07 / VIDEO', '视频', '视频是 JUNAF 的独立表达方向。'],
     thinking: ['08 / THINKING', '思考', '记录观点、研究与创作过程。'],
     tools: ['09 / TOOLS', '工具', '将自主开发的工具组织在统一入口。'],
@@ -79,7 +78,7 @@
     const counts = data.counts || {};
     const area = section('运营总览', '当前数字直接来自 JUNAF 独立数据库。');
     const grid = node('div', '', 'admin-metrics');
-    for (const [key, label] of [['accounts', '有效账号'], ['stores', '有效门店'],
+    for (const [key, label] of [['accounts', '有效用户'],
       ['publishedPacks', '已发布音乐方案'], ['enabledProducts', '已上架商品'],
       ['orders', '音乐订单'], ['pendingOrders', '待处理核款']])
       metric(grid, String(counts[key] ?? 0), label);
@@ -105,11 +104,11 @@
       ['状态', row => row.status], ['阶段', row => String(row.stages)],
       ['版本', row => row.version || '—'], ['更新', row => date(row.updatedAt)]],
     packs.packs || [], '当前没有音乐方案。');
-    const productArea = section('门店商品', '购买总开关关闭期间，商品不会向用户开放交易。');
+    const productArea = section('音乐商品', '购买总开关关闭期间，商品不会向用户开放交易。');
     table(productArea, [['商品', row => row.name || row.packId], ['对应方案', row => row.packId],
       ['价格', row => money(row.priceFen)], ['期限', row => `${row.days} 天`],
       ['设备', row => String(row.maxDevices)], ['状态', row => row.enabled ? '已上架' : '未上架']],
-    products.products || [], '当前没有门店音乐商品。');
+    products.products || [], '当前没有音乐商品。');
   }
   function formField(form, labelText, name, type = 'text') {
     const label = node('label', labelText);
@@ -124,7 +123,7 @@
     const card = node('article', '', 'admin-order');
     const info = node('div');
     info.append(node('h3', order.product?.name || order.id),
-      node('p', `${order.storeName || order.storeId || '门店'} · ${statusText[order.status] || order.status}`),
+      node('p', `${order.accountEmail || order.storeName || order.storeId || '用户'} · ${statusText[order.status] || order.status}`),
       node('p', `订单 ${order.id} · 应收 ${money(order.product?.priceFen)}`),
       node('p', `付款时间：${date(order.paidAt)} · 交易尾号：${order.paymentRef || '未提交'}`));
     if (order.collisionFlag) info.append(node('p', '交易尾号重复，确认到账时须填写完整交易单号。'));
@@ -202,7 +201,7 @@
       const data = await api(`/music/shop/orders?${params}`);
       results.replaceChildren();
       results.append(node('p', `共 ${data.total} 笔订单；当前第 ${data.page} 页。`));
-      table(results, [['订单', row => row.id], ['门店', row => row.storeName || row.storeId || '—'],
+      table(results, [['订单', row => row.id], ['用户', row => row.accountEmail || row.storeName || row.storeId || '—'],
         ['商品', row => row.product?.name || '—'], ['金额', row => money(row.product?.priceFen)],
         ['状态', row => statusText[row.status] || row.status], ['创建', row => date(row.createdAt)]],
       data.orders || [], '没有符合条件的订单。');
@@ -210,19 +209,12 @@
     form.addEventListener('submit', event => {event.preventDefault(); query().catch(error => message(error.message));});
     await query();
   }
-  async function renderStores() {
-    const data = await api('/stores');
-    const area = section('门店列表', '显示最近 100 家门店与已关联的负责人。');
-    table(area, [['门店', row => row.name], ['状态', row => row.status],
-      ['负责人', row => row.owners.join('、') || '未关联'], ['创建', row => date(row.createdAt)]],
-    data.stores || [], '当前没有门店。');
-  }
   async function renderAccounts() {
     const data = await api('/accounts');
-    const area = section('JUNAF 账号', '只显示必要的账号信息；密码与会话不会出现在后台列表。');
+    const area = section('JUNAF 用户', '只显示必要的用户信息；密码与会话不会出现在后台列表。');
     table(area, [['邮箱', row => row.email], ['称呼', row => row.name || '—'],
       ['状态', row => row.status], ['创建', row => date(row.createdAt)]],
-    data.accounts || [], '当前没有账号。');
+    data.accounts || [], '当前没有用户。');
   }
   async function renderSystem() {
     const data = await api('/system');
@@ -262,7 +254,6 @@
       else if (view === 'music') await renderMusic();
       else if (view === 'review') await renderReview();
       else if (view === 'orders') await renderOrders();
-      else if (view === 'stores') await renderStores();
       else if (view === 'accounts') await renderAccounts();
       else if (view === 'system') await renderSystem();
       else renderPlanned(view);
