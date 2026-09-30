@@ -36,7 +36,7 @@
     const card = node('article', '', 'order-card');
     const info = node('div');
     info.append(node('h3', order.product?.name || order.id));
-    info.append(node('p', `${order.storeName || order.storeId || '门店'} · ${statusText[order.status] || order.status}`));
+    info.append(node('p', `${order.accountEmail || order.storeName || order.storeId || '用户'} · ${statusText[order.status] || order.status}`));
     info.append(node('p', `订单 ${order.id} · 应收 ¥${((order.product?.priceFen || 0) / 100).toFixed(2)}`));
     info.append(node('p', `用户提交的付款时间：${order.paidAt || '未提交'} · 交易尾号：${order.paymentRef || '未提交'}`));
     if (order.collisionFlag) info.append(node('p', '交易尾号与同日其他订单重复，需要核对完整交易单号。'));
