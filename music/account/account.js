@@ -129,6 +129,7 @@
     $('#registration').hidden = true;
     $('#signed-in').hidden = false;
     $('#account-name').textContent = data.account.displayName || data.account.email;
+    $('#admin-entry').hidden = data.isAdmin !== true;
     const list = $('#store-list');
     list.replaceChildren();
     for (const [index, store] of data.stores.entries()) {

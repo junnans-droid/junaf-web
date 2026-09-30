@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#171814">
+  <meta name="robots" content="noindex,nofollow">
+  <title>JUNAF 后台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body class="admin-shell">
+  <a class="skip" href="#workspace">跳至后台内容</a>
+  <aside class="admin-sidebar" aria-label="后台导航">
+    <a class="admin-brand" href="/">JUNAF<span>.</span><small>CONTROL</small></a>
+    <p class="admin-caption">一种语言，多个方向。<br>从这里观察并管理 JUNAF。</p>
+    <nav id="admin-nav">
+      <span>工作台</span>
+      <a href="#overview" data-view="overview">概览</a>
+      <span>音乐 / MUSIC</span>
+      <a href="#music" data-view="music">方案与商品</a>
+      <a href="#review" data-view="review">订单核款</a>
+      <a href="#orders" data-view="orders">订单查询</a>
+      <span>组织 / PEOPLE</span>
+      <a href="#stores" data-view="stores">门店</a>
+      <a href="#accounts" data-view="accounts">账号</a>
+      <span>更多方向</span>
+      <a href="#video" data-view="video">视频</a>
+      <a href="#thinking" data-view="thinking">思考</a>
+      <a href="#tools" data-view="tools">工具</a>
+      <span>系统</span>
+      <a href="#system" data-view="system">运行状态</a>
+    </nav>
+    <div class="admin-sidebar-foot"><a href="/">返回网站 ↗</a><a href="/music/account/">账号中心 ↗</a></div>
+  </aside>
+  <main id="workspace" class="admin-workspace">
+    <div class="admin-topline"><span>JUNAF / ADMINISTRATION</span><span id="admin-identity">正在核验身份</span></div>
+    <section class="admin-intro"><span id="view-index">01 / OVERVIEW</span><h1 id="view-title">整体概览</h1><p id="view-description">音乐、视频、思考与工具，共享 JUNAF 的设计语言。</p></section>
+    <p id="admin-message" role="status">正在连接 JUNAF 后台…</p>
+    <div id="admin-login" class="admin-login" hidden><h2>需要管理员身份</h2><p>请先使用 JUNAF 管理员账号登录。</p><a href="/music/account/">前往登录 →</a></div>
+    <div id="admin-content" aria-live="polite"></div>
+  </main>
+  <script src="/admin/admin.js" defer></script>
+</body>
+</html>
