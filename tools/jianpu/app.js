@@ -8,7 +8,7 @@
   const node = (tag,text,className) => {const x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(className)x.className=className;return x;};
   const uuid = () => crypto.randomUUID();
   const status = text => { $('save-status').textContent = text; };
-  let account=null,summaries=[],score=null,saveTimer=null,saveQueue=Promise.resolve(),recording=null;
+  let account=null,summaries=[],score=null,saveTimer=null,saveQueue=Promise.resolve(),recording=null,playback=null;
   const localAudio=new Map(),pendingAudio=new Map();
   function freshScore() {
     return {id:uuid(),title:'未命名旋律',key:0,mode:'major',bpm:90,meter:'4/4',idea:'',
@@ -52,7 +52,70 @@
     });
     try {await saveQueue;}catch(error){status(`同步失败：${error.message}`);}
   }
-  function scheduleSave(){if(!score)return;const item=score;status(account?'正在同步…':'正在保存本机…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveScore(item),700);}
+  function scheduleSave(){if(!score)return;stopPlayback();const item=score;status(account?'正在同步…':'正在保存本机…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveScore(item),700);}
+  function playerTime(seconds){const n=Math.max(0,Math.floor(seconds));return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;}
+  function playerUi() {
+    $('play-score').textContent=playback?.paused?'继续播放 ▶':playback?'暂停 Ⅱ':'播放曲谱 ▶';
+    $('stop-score').disabled=!playback;
+    const total=playback?.totalSeconds||Math.max(0,...C.playbackEvents(score||{notes:[],chords:[],meter:'4/4'},$('play-chords').checked)
+      .map(x=>x.startBeat+x.durationBeats))*60/(score?.bpm||90);
+    const elapsed=playback?Math.min(total,Math.max(0,playback.context.currentTime-playback.startTime)):0;
+    $('play-progress').textContent=`${playerTime(elapsed)} / ${playerTime(total)}`;
+  }
+  function stopPlayback() {
+    if(!playback)return;
+    clearInterval(playback.timer);
+    const old=playback;playback=null;
+    old.context.close().catch(()=>{});
+    playerUi();
+  }
+  function scheduleTone(context,event,start,duration) {
+    const oscillator=context.createOscillator(),gain=context.createGain();
+    oscillator.type=event.type==='chord'?'triangle':'sine';
+    oscillator.frequency.value=440*Math.pow(2,(event.midi-69)/12);
+    const level=event.type==='chord'?.045:.17;
+    gain.gain.setValueAtTime(0,start);
+    gain.gain.linearRampToValueAtTime(level,start+.015);
+    gain.gain.setValueAtTime(level,start+Math.max(.016,duration-.055));
+    gain.gain.linearRampToValueAtTime(0,start+duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(start);oscillator.stop(start+duration+.01);
+    oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+  }
+  async function playScore() {
+    if(playback){
+      try {if(playback.paused){await playback.context.resume();playback.paused=false;}
+        else {await playback.context.suspend();playback.paused=true;}playerUi();}
+      catch(error){stopPlayback();status(`播放失败：${error.message}`);}
+      return;
+    }
+    if(recording){status('请先结束录音，再播放曲谱');return;}
+    const events=C.playbackEvents(score,$('play-chords').checked);
+    if(!events.length){status('曲谱还没有音符或和弦');return;}
+    const Audio=window.AudioContext||window.webkitAudioContext;
+    if(!Audio){status('此浏览器不支持曲谱播放');return;}
+    try {
+      const context=new Audio();await context.resume();
+      const beatSeconds=60/score.bpm,startTime=context.currentTime+.08;
+      const endBeat=Math.max(...events.map(x=>x.startBeat+x.durationBeats));
+      const session={context,events,index:0,startTime,beatSeconds,endBeat,
+        totalSeconds:endBeat*beatSeconds,paused:false,timer:null};
+      playback=session;
+      const tick=()=>{
+        if(playback!==session||session.paused)return;
+        const now=context.currentTime;
+        while(session.index<events.length&&startTime+events[session.index].startBeat*beatSeconds<now+.25){
+          const event=events[session.index++];
+          const at=Math.max(now+.005,startTime+event.startBeat*beatSeconds);
+          const duration=Math.max(.06,event.durationBeats*beatSeconds*.9);
+          scheduleTone(context,event,at,duration);
+        }
+        playerUi();
+        if(session.index===events.length&&now>=startTime+endBeat*beatSeconds+.08)stopPlayback();
+      };
+      session.timer=setInterval(tick,50);tick();
+    }catch(error){stopPlayback();status(`播放失败：${error.message}`);}
+  }
   async function uploadPending(scoreId) {
     for(const [key,blob] of [...pendingAudio]) {
       if(!key.startsWith(`${scoreId}:`))continue;
@@ -101,7 +164,7 @@
   function renderPreview() {
     const preview=$('score-preview');preview.replaceChildren();
     preview.append(node('div',`1=${C.ROOTS[score.key]} ${score.mode==='major'?'大调':'小调'} · ${score.meter} · ♩=${score.bpm}`,'jp-preview-head'));
-    if(!score.notes.length){preview.append(node('p','尚无音符。开始录音或手动添加音符。'));return;}
+    if(!score.notes.length&&!score.chords.length){preview.append(node('p','尚无音符。开始录音或手动添加音符。'));return;}
     const beats=C.beatCount(score.meter);
     const allBarNumbers=[...new Set([...score.notes.map(n=>Math.floor(n.startBeat/beats)+1),
       ...score.chords.map(chord=>chord.bar)])].sort((a,b)=>a-b);
@@ -109,10 +172,34 @@
     const bars=node('div',undefined,'jp-bars');
     for(const bar of barNumbers) {
       const box=node('div',undefined,'jp-bar');box.append(node('small',`小节 ${bar}`));
-      const chord=score.chords.find(x=>x.bar===bar);box.append(node('strong',chord?C.chordName(chord.root,chord.quality):'—'));
+      const chord=score.chords.find(x=>x.bar===bar);
+      const chordEdit=node('div',undefined,'jp-inline-chord');
+      const root=node('select');root.setAttribute('aria-label',`第 ${bar} 小节和弦根音`);
+      labelOptions(root,[['none','无和弦'],...C.ROOTS.map((name,i)=>[String(i),name])]);root.value=chord?String(chord.root):'none';
+      const quality=node('select');quality.setAttribute('aria-label',`第 ${bar} 小节和弦类型`);
+      labelOptions(quality,Object.entries(C.QUALITY).map(([id,item])=>[id,item.name]));quality.value=chord?.quality||'maj';quality.disabled=!chord;
+      root.addEventListener('change',()=>{
+        score.chords=score.chords.filter(x=>x.bar!==bar);
+        if(root.value!=='none')score.chords.push({bar,root:Number(root.value),quality:quality.value});
+        renderChords();renderPreview();scheduleSave();
+      });
+      quality.addEventListener('change',()=>{const item=score.chords.find(x=>x.bar===bar);
+        if(item){item.quality=quality.value;renderChords();renderPreview();scheduleSave();}});
+      chordEdit.append(root,quality);box.append(chordEdit);
       const line=node('div',undefined,'jp-bar-notes');
       for(const note of score.notes.filter(x=>Math.floor(x.startBeat/beats)+1===bar).sort((a,b)=>a.startBeat-b.startBeat)) {
-        const cell=node('span',C.jianpu(note.midi,score.key,score.mode));cell.append(node('small',`${note.durationBeats}拍`));line.append(cell);
+        const cell=node('div',undefined,'jp-note-edit');
+        const symbol=node('button',C.jianpu(note.midi,score.key,score.mode));symbol.type='button';symbol.title='点击定位到音符详细编辑';
+        symbol.append(node('small',`${note.durationBeats}拍`));
+        symbol.addEventListener('click',()=>{const row=document.getElementById(`note-${note.id}`);row?.scrollIntoView({behavior:'smooth',block:'center'});row?.querySelector('input[type=number]')?.focus();});
+        const pitch=node('input');pitch.type='number';pitch.min=36;pitch.max=96;pitch.value=note.midi;
+        pitch.setAttribute('aria-label',`第 ${bar} 小节音符音高 MIDI`);
+        pitch.addEventListener('change',()=>{note.midi=Math.max(36,Math.min(96,Math.round(Number(pitch.value)||60)));renderPreview();renderNotes();scheduleSave();});
+        const lyric=node('input');lyric.type='text';lyric.maxLength=40;lyric.value=note.lyric||'';lyric.placeholder='歌词';
+        lyric.setAttribute('aria-label',`第 ${bar} 小节音符歌词`);
+        lyric.addEventListener('input',()=>{note.lyric=lyric.value;scheduleSave();});
+        cell.append(symbol,pitch,lyric);
+        line.append(cell);
       }
       box.append(line);bars.append(box);
     }
@@ -161,17 +248,20 @@
   function renderNotes() {
     const body=$('note-rows');body.replaceChildren();
     for(const note of [...score.notes].sort((a,b)=>a.startBeat-b.startBeat).slice(0,1500)) {
-      const tr=node('tr');
+      const tr=node('tr');tr.id=`note-${note.id}`;
       const segment=node('select');labelOptions(segment,score.segments.map(x=>[x.id,x.name]));segment.value=note.segmentId;
       segment.addEventListener('change',()=>{note.segmentId=segment.value;scheduleSave();});
       const midi=node('input');midi.type='number';midi.min=36;midi.max=96;midi.value=note.midi;midi.setAttribute('aria-label','MIDI 音高');
-      midi.title=C.noteName(note.midi);midi.addEventListener('change',()=>{note.midi=Math.max(36,Math.min(96,Math.round(Number(midi.value)||60)));midi.value=note.midi;midi.title=C.noteName(note.midi);renderPreview();scheduleSave();});
+      midi.title=C.noteName(note.midi);midi.addEventListener('change',()=>{note.midi=Math.max(36,Math.min(96,Math.round(Number(midi.value)||60)));midi.value=note.midi;midi.title=C.noteName(note.midi);renderPreview();renderNotes();scheduleSave();});
       const start=node('input');start.type='number';start.min=0;start.step=.25;start.value=note.startBeat;
       start.addEventListener('change',()=>{note.startBeat=Math.max(0,Math.min(100000,Number(start.value)||0));renderPreview();scheduleSave();});
       const duration=node('input');duration.type='number';duration.min=.125;duration.max=64;duration.step=.25;duration.value=note.durationBeats;
       duration.addEventListener('change',()=>{note.durationBeats=Math.max(.125,Math.min(64,Number(duration.value)||1));renderPreview();scheduleSave();});
+      const lyric=node('input');lyric.type='text';lyric.maxLength=40;lyric.value=note.lyric||'';lyric.placeholder='歌词';
+      lyric.setAttribute('aria-label','音符歌词');lyric.addEventListener('input',()=>{note.lyric=lyric.value;renderPreview();scheduleSave();});
       const remove=node('button','删除');remove.type='button';remove.addEventListener('click',()=>{score.notes=score.notes.filter(x=>x.id!==note.id);renderAll();scheduleSave();});
-      for(const control of [segment,midi,start,duration,remove]){const td=node('td');td.append(control);tr.append(td);}body.append(tr);
+      const pitch=node('div');pitch.append(midi,node('small',`${C.noteName(note.midi)} · 简谱 ${C.jianpu(note.midi,score.key,score.mode)}`));
+      for(const control of [segment,pitch,start,duration,lyric,remove]){const td=node('td');td.append(control);tr.append(td);}body.append(tr);
     }
   }
   function renderChords() {
@@ -179,7 +269,7 @@
     for(const chord of [...score.chords].sort((a,b)=>a.bar-b.bar)) {
       const row=node('article');row.append(node('strong',`小节 ${chord.bar} · ${C.chordName(chord.root,chord.quality)}`),
         node('small',C.chordNotes(chord.root,chord.quality).join(' · ')));
-      const edit=node('button','编辑');edit.type='button';edit.addEventListener('click',()=>{$('chord-bar').value=chord.bar;$('chord-root').value=chord.root;$('chord-quality').value=chord.quality;});
+      const edit=node('button','载入修改');edit.type='button';edit.addEventListener('click',()=>{$('chord-bar').value=chord.bar;$('chord-root').value=chord.root;$('chord-quality').value=chord.quality;$('add-chord').focus();});
       const remove=node('button','删除');remove.type='button';remove.addEventListener('click',()=>{score.chords=score.chords.filter(x=>x!==chord);renderChords();renderPreview();scheduleSave();});
       const actions=node('div',undefined,'jp-actions');actions.append(edit,remove);row.append(actions);list.append(row);
     }
@@ -188,7 +278,7 @@
   function renderAll() {
     $('score-title').value=score.title;$('score-key').value=score.key;$('score-mode').value=score.mode;
     $('score-bpm').value=score.bpm;$('score-meter').value=score.meter;$('score-idea').value=score.idea;
-    renderSegments();renderNotes();renderChords();renderPreview();updatePicker();
+    renderSegments();renderNotes();renderChords();renderPreview();updatePicker();playerUi();
   }
   function safeName(value) {return String(value).replace(/[\\/:*?"<>|]/g,'-').slice(0,80)||'JUNAF';}
   function download(content,type,name) {
@@ -196,12 +286,14 @@
     setTimeout(()=>URL.revokeObjectURL(url),30000);
   }
   async function choose(id) {
+    stopPlayback();
     clearTimeout(saveTimer);if(score)await saveScore(score);
     if(account){try{score=(await request(`/scores/${id}`)).score;}catch(error){status(error.message);return;}}
     else score=guestScores().find(x=>x.id===id);
     if(score)renderAll();
   }
   async function startRecording() {
+    stopPlayback();
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$('record-status').textContent='此浏览器不支持录音；可手动添加音符。';return;}
     if(score.segments.length>=30){$('record-status').textContent='当前曲谱已达到 30 个段落上限，请新建曲谱。';return;}
     if(score.notes.length>=1500){$('record-status').textContent='当前曲谱已达到 1500 个音符上限，请新建曲谱。';return;}
@@ -249,10 +341,13 @@
     }catch(error){stream?.getTracks().forEach(track=>track.stop());$('record-toggle').disabled=false;$('record-status').textContent=`无法开始录音：${error.message}`;}
   }
   function bind() {
+    $('play-score').addEventListener('click',playScore);
+    $('stop-score').addEventListener('click',stopPlayback);
+    $('play-chords').addEventListener('change',()=>{stopPlayback();playerUi();});
     $('score-picker').addEventListener('change',e=>choose(e.target.value));
-    $('new-score').addEventListener('click',async()=>{clearTimeout(saveTimer);if(score)await saveScore(score);score=freshScore();renderAll();await saveScore(score);});
+    $('new-score').addEventListener('click',async()=>{stopPlayback();clearTimeout(saveTimer);if(score)await saveScore(score);score=freshScore();renderAll();await saveScore(score);});
     $('delete-score').addEventListener('click',async()=>{if(!score||!confirm(`删除曲谱“${score.title}”及其录音？`))return;
-      const id=score.id;try{if(account)await request(`/scores/${id}`,'DELETE');else localStorage.setItem(GUEST_KEY,JSON.stringify(guestScores().filter(x=>x.id!==id)));
+      const id=score.id;stopPlayback();try{if(account)await request(`/scores/${id}`,'DELETE');else localStorage.setItem(GUEST_KEY,JSON.stringify(guestScores().filter(x=>x.id!==id)));
         summaries=summaries.filter(x=>x.id!==id);score=null;
         if(summaries.length)await choose(summaries[0].id);else{score=freshScore();renderAll();await saveScore(score);}status('曲谱已删除');
       }catch(error){status(error.message);}});
@@ -277,7 +372,7 @@
     $('import-guest').addEventListener('click',async()=>{if(!account)return;const rows=guestScores();let added=0;
       for(const item of rows){if(summaries.some(x=>x.id===item.id))item.id=uuid();await saveScore(item);added++;}
       localStorage.removeItem(GUEST_KEY);$('import-guest').hidden=true;status(`已导入 ${added} 份本机曲谱；本机录音文件无法补传`);});
-    window.addEventListener('pagehide',()=>{if(recording)recording.recorder.stop();});
+    window.addEventListener('pagehide',()=>{stopPlayback();if(recording)recording.recorder.stop();});
   }
   async function initialize() {
     setupReference();bind();
