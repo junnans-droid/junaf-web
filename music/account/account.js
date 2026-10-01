@@ -4,6 +4,7 @@
     ? 'http://127.0.0.1:3100' : 'https://api.junaf.com';
   const $ = selector => document.querySelector(selector);
   const message = value => { $('#account-message').textContent = value; };
+  const registrationMessage = value => { $('#register-message').textContent = value; };
   const returnToTool = () => {
     const next = new URLSearchParams(location.search).get('next');
     if (next && /^\/tools\/[a-z0-9-]+\/$/.test(next)) location.assign(next);
@@ -173,11 +174,16 @@
   $('#send-email-code').addEventListener('click', async event => {
     const button = event.currentTarget;
     const email = $('#register-form [name="email"]');
-    if (!email.reportValidity()) return;
+    if (!email.checkValidity()) {
+      registrationMessage('请先填写有效的邮箱地址');
+      email.focus();
+      return;
+    }
     button.disabled = true;
+    registrationMessage('正在发送验证码…');
     try {
       await request('/email-code', 'POST', {email: email.value.trim()});
-      message('验证码已发送，请查看邮箱；10 分钟内有效');
+      registrationMessage('验证码已发送，请查看邮箱；10 分钟内有效');
       let remaining = 60;
       button.textContent = `${remaining} 秒后重发`;
       clearInterval(emailCountdown);
@@ -189,7 +195,7 @@
           button.textContent = '重新发送验证码';
         } else button.textContent = `${remaining} 秒后重发`;
       }, 1000);
-    } catch (error) { button.disabled = false; message(error.message); }
+    } catch (error) { button.disabled = false; registrationMessage(error.message); }
   });
   $('#login-form').addEventListener('submit', async event => {
     event.preventDefault();
@@ -206,16 +212,26 @@
   $('#register-form').addEventListener('submit', async event => {
     event.preventDefault();
     const button = event.submitter;
+    const formElement = event.currentTarget;
+    const invalid = [...formElement.querySelectorAll('input[required]')].find(input => !input.checkValidity());
+    if (invalid) {
+      const labels = {email: '邮箱', emailCode: '6 位邮箱验证码', displayName: '称呼',
+        password: '至少 12 位密码', passwordConfirm: '确认密码'};
+      registrationMessage(`请填写有效的${labels[invalid.name] || '注册信息'}`);
+      invalid.focus();
+      return;
+    }
     button.disabled = true;
+    registrationMessage('正在创建账号…');
     try {
-      const form = new FormData(event.currentTarget);
+      const form = new FormData(formElement);
       if (form.get('password') !== form.get('passwordConfirm')) throw Error('两次输入的密码不一致');
       const payload = Object.fromEntries(form);
       delete payload.passwordConfirm;
       renderAccount(await request('/register', 'POST', payload));
       event.currentTarget.reset();
       returnToTool();
-    } catch (error) { message(error.message); }
+    } catch (error) { registrationMessage(error.message); }
     finally { button.disabled = false; }
   });
   $('#logout').addEventListener('click', async () => {
