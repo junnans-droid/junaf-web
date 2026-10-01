@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#171814"><meta name="description" content="JUNAF 简谱工具：分段录音、旋律转简谱、和弦表、编辑与曲谱导出。">
   <title>简谱工具 — JUNAF Tools</title>
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/jianpu/style.css?v=20261001-3">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/jianpu/style.css?v=20261001-4">
 </head>
 <body class="jianpu-page">
   <a class="skip" href="#main">跳至正文</a>
@@ -19,14 +19,15 @@
     </section>
     <section class="jp-record">
       <div class="kicker"><span>02 / 分段录音</span><span>CAPTURE THE VOICE</span></div>
-      <div class="jp-split"><div><h2>从一段哼唱，<br>开始记录。</h2><p>每次录音成为一个段落。安静环境下哼唱单声部旋律，音高识别会更稳定；录音需要浏览器麦克风权限。</p><label>段落名称<input id="segment-name" maxlength="60" placeholder="例如：主歌 A"></label><div class="jp-actions"><button id="record-toggle" type="button">开始录音 ●</button><strong id="record-timer">0:00</strong></div><p id="record-status" role="status">准备就绪。录音最长 5 分钟，结束后可逐个编辑音符。</p></div><div><h3>已录段落</h3><div id="segment-list" class="jp-list"></div></div></div>
+      <div class="jp-split"><div><h2>从一段哼唱，<br>开始记录。</h2><p>点击下方曲谱选择小节，可从那里录入新段落；这里的按钮从曲尾续录。新录音不会覆盖原有音符，录完可在段落列表回听或删除。</p><label>段落名称<input id="segment-name" maxlength="60" placeholder="例如：主歌 A"></label><div class="jp-actions"><button id="record-toggle" type="button">从曲尾录音 ●</button><strong id="record-timer">0:00</strong></div><p id="record-status" role="status">准备就绪。录音最长 5 分钟。</p></div><div><h3>已录段落</h3><div id="segment-list" class="jp-list"></div></div></div>
     </section>
     <section class="jp-notation">
       <div class="kicker"><span>03 / 简谱与和弦</span><span>WRITE THE MELODY</span></div>
-      <div class="jp-heading"><div><h2>听见的音，<br>可以再推敲。</h2><p>在曲谱上直接修改简谱音高、和弦与对应歌词。每个小节都可作为播放或新一段录音的起点；新录音保留原有音符。</p></div><div class="jp-actions"><button id="add-note" type="button">手动添加音符 ＋</button><button id="suggest-chords" type="button" class="jp-quiet">按旋律建议和弦</button></div></div>
+      <div class="jp-heading"><div><h2>听见的音，<br>可以再推敲。</h2><p>先选小节，再从此处播放、录音或加音。音高、和弦与歌词可在曲谱上直接修改。</p></div><div class="jp-actions"><button id="suggest-chords" type="button" class="jp-quiet">按旋律建议和弦</button></div></div>
       <div class="jp-player"><button id="play-score" type="button">播放曲谱 ▶</button><button id="stop-score" type="button" class="jp-quiet" disabled>停止 ■</button><label><input id="play-chords" type="checkbox" checked> 包含和弦</label><span id="play-progress" role="status">0:00 / 0:00</span></div>
+      <div class="jp-bar-toolbar"><label>当前小节 <input id="selected-bar" type="number" min="1" max="100000" value="1" aria-label="当前小节编号"></label><button id="play-selected" type="button">从此播放 ▶</button><button id="record-selected" type="button">从此录音 ●</button><button id="add-note" type="button">在此加音 ＋</button><span id="bar-selection-status" role="status">点击曲谱中的小节即可选择</span></div>
       <div id="score-preview" class="jp-preview" aria-label="简谱预览"></div>
-      <div class="jp-editor-grid"><div><h3>音符编辑</h3><p class="jp-edit-hint">点击上方简谱音符可定位编辑。修改后曲谱会自动保存。</p><div class="jp-table-wrap"><table class="jp-table"><thead><tr><th>段落</th><th>音高 / 简谱</th><th>起拍</th><th>时值 / 拍</th><th>歌词</th><th></th></tr></thead><tbody id="note-rows"></tbody></table></div></div><div><h3>和弦编辑</h3><div class="jp-actions"><input id="chord-bar" type="number" min="1" value="1" aria-label="和弦小节"><select id="chord-root" aria-label="和弦根音"></select><select id="chord-quality" aria-label="和弦类型"></select><button id="add-chord" type="button">添加 / 更新和弦</button></div><div id="chord-list" class="jp-list"></div></div></div>
+      <details id="advanced-editor" class="jp-advanced"><summary>详细编辑：起拍、时值与音符参数</summary><div class="jp-editor-grid"><div><h3>音符编辑</h3><p class="jp-edit-hint">仅在需要精确调整时使用。修改后曲谱会自动保存。</p><div class="jp-table-wrap"><table class="jp-table"><thead><tr><th>段落</th><th>音高 / 简谱</th><th>起拍</th><th>时值 / 拍</th><th>歌词</th><th></th></tr></thead><tbody id="note-rows"></tbody></table></div></div><div><h3>和弦编辑</h3><div class="jp-actions"><input id="chord-bar" type="number" min="1" value="1" aria-label="和弦小节"><select id="chord-root" aria-label="和弦根音"></select><select id="chord-quality" aria-label="和弦类型"></select><button id="add-chord" type="button">添加 / 更新和弦</button></div><div id="chord-list" class="jp-list"></div></div></div></details>
     </section>
     <section class="jp-reference">
       <div class="kicker"><span>04 / 和弦资料</span><span>HARMONY INDEX</span></div><h2>从总表，<br>找到每一个调。</h2><div class="jp-reference-grid"><div><h3>和弦总表</h3><p>12 个根音 × 11 种常见和弦。可按根音与类型筛选。</p><div class="jp-actions"><select id="reference-root" aria-label="筛选根音"><option value="all">全部根音</option></select><select id="reference-quality" aria-label="筛选和弦类型"><option value="all">全部类型</option></select></div><div id="chord-catalog" class="jp-catalog"></div></div><div><h3>大小调分表</h3><p>选择 12 个大调或 12 个自然小调，查看七级自然三和弦。</p><div class="jp-actions"><select id="reference-key" aria-label="调的主音"></select><select id="reference-mode" aria-label="大调或小调"><option value="major">大调</option><option value="minor">小调</option></select></div><div id="key-chords" class="jp-key-chords"></div></div></div></section>
@@ -34,6 +35,6 @@
     <section class="jp-footnote"><p>音高识别适合单人哼唱或清晰独奏。多声部、人声伴奏和复杂录音可能识别不准；和弦建议来自旋律音级匹配，需要人工复核。录音文件只对登录账号开放，存放于 JUNAF 服务器本地。</p><a href="/tools/">返回 Tools ↗</a></section>
   </main>
   <footer><div><a class="footer-brand" href="/">JUNAF<span>.</span></a><p>未来需要一种新的语言。</p></div><div class="footer-links"><a href="/">首页</a><a href="/music/">Music</a><a href="/tools/">Tools</a></div><div class="meta">© 2026 JUNAF<br>ART / DESIGN / CONSTRUCTION</div></footer>
-  <script src="/site.js" defer></script><script src="/tools/jianpu/core.js?v=20261001-3" defer></script><script src="/tools/jianpu/app.js?v=20261001-3" defer></script>
+  <script src="/site.js" defer></script><script src="/tools/jianpu/core.js?v=20261001-4" defer></script><script src="/tools/jianpu/app.js?v=20261001-4" defer></script>
 </body>
 </html>

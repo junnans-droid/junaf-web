@@ -8,7 +8,7 @@
   const node = (tag,text,className) => {const x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(className)x.className=className;return x;};
   const uuid = () => crypto.randomUUID();
   const status = text => { $('save-status').textContent = text; };
-  let account=null,summaries=[],score=null,saveTimer=null,saveQueue=Promise.resolve(),recording=null,playback=null,barPage=0;
+  let account=null,summaries=[],score=null,saveTimer=null,saveQueue=Promise.resolve(),recording=null,playback=null,barPage=0,selectedBar=1;
   const localAudio=new Map(),pendingAudio=new Map();
   function freshScore() {
     return {id:uuid(),title:'未命名旋律',key:0,mode:'major',bpm:90,meter:'4/4',idea:'',
@@ -61,12 +61,18 @@
       .map(x=>x.startBeat+x.durationBeats))*60/(score?.bpm||90);
     const elapsed=playback?Math.min(total,Math.max(0,playback.context.currentTime-playback.startTime)):0;
     $('play-progress').textContent=`${playback?.fromBeat?`第 ${Math.floor(playback.fromBeat/C.beatCount(score.meter))+1} 小节 · `:''}${playerTime(elapsed)} / ${playerTime(total)}`;
+    if(playback){
+      const activeBar=Math.floor((playback.fromBeat+elapsed/playback.beatSeconds)/C.beatCount(score.meter))+1;
+      for(const box of document.querySelectorAll('.jp-bar'))
+        box.classList.toggle('is-playing',Number(box.dataset.bar)===activeBar);
+    }
   }
   function stopPlayback() {
     if(!playback)return;
     clearInterval(playback.timer);
     const old=playback;playback=null;
     old.context.close().catch(()=>{});
+    document.querySelectorAll('.jp-bar.is-playing').forEach(box=>box.classList.remove('is-playing'));
     playerUi();
   }
   function scheduleTone(context,event,start,duration) {
@@ -149,7 +155,7 @@
       if(rootFilter!=='all'&&Number(rootFilter)!==root || qualityFilter!=='all'&&qualityFilter!==quality)continue;
       const button=node('button');button.type='button';
       button.append(node('strong',C.chordName(root,quality)),node('span',`${definition.name} · ${C.chordNotes(root,quality).join(' · ')}`));
-      button.addEventListener('click',()=>{$('chord-root').value=String(root);$('chord-quality').value=quality;$('chord-bar').focus();});
+      button.addEventListener('click',()=>{$('advanced-editor').open=true;$('chord-root').value=String(root);$('chord-quality').value=quality;$('chord-bar').focus();});
       catalog.append(button);
     }
     const keyRoot=Number($('reference-key').value),mode=$('reference-mode').value;
@@ -158,29 +164,38 @@
       const button=node('button');button.type='button';
       button.append(node('strong',`${chord.degree} · ${C.chordName(chord.root,chord.quality)}`),
         node('span',C.chordNotes(chord.root,chord.quality).join(' · ')));
-      button.addEventListener('click',()=>{$('chord-root').value=String(chord.root);$('chord-quality').value=chord.quality;$('chord-bar').focus();});
+      button.addEventListener('click',()=>{$('advanced-editor').open=true;$('chord-root').value=String(chord.root);$('chord-quality').value=chord.quality;$('chord-bar').focus();});
       table.append(button);
     }
+  }
+  function selectBar(bar) {
+    selectedBar=Math.max(1,Math.min(100000,Math.round(Number(bar)||1)));
+    $('selected-bar').value=selectedBar;
+    $('bar-selection-status').textContent=`第 ${selectedBar} 小节已选中`;
+    const page=Math.floor((selectedBar-1)/128);
+    if(page!==barPage||!document.querySelector(`.jp-bar[data-bar="${selectedBar}"]`)){
+      barPage=page;renderPreview();
+    }else for(const box of document.querySelectorAll('.jp-bar'))
+      box.classList.toggle('is-selected',Number(box.dataset.bar)===selectedBar);
   }
   function renderPreview() {
     const preview=$('score-preview');preview.replaceChildren();
     preview.append(node('div',`1=${C.ROOTS[score.key]} ${score.mode==='major'?'大调':'小调'} · ${score.meter} · ♩=${score.bpm}`,'jp-preview-head'));
     const beats=C.beatCount(score.meter);
-    const lastBar=Math.max(1,...score.notes.map(n=>Math.floor((n.startBeat+n.durationBeats-.001)/beats)+1),
+    const lastBar=Math.max(selectedBar,...score.notes.map(n=>Math.floor((n.startBeat+n.durationBeats-.001)/beats)+1),
       ...score.chords.map(chord=>chord.bar));
     barPage=Math.min(barPage,Math.floor((lastBar-1)/128));
     const firstBar=barPage*128+1,lastShown=Math.min(lastBar,firstBar+127);
     const barNumbers=Array.from({length:lastShown-firstBar+1},(_,i)=>firstBar+i);
     const bars=node('div',undefined,'jp-bars');
     for(const bar of barNumbers) {
-      const box=node('div',undefined,'jp-bar');box.append(node('small',`小节 ${bar}`));
-      const barActions=node('div',undefined,'jp-bar-actions');
-      const fromBeat=(bar-1)*beats;
-      const playFrom=node('button','从此播放 ▶');playFrom.type='button';
-      playFrom.addEventListener('click',()=>playScore(fromBeat,true));
-      const recordFrom=node('button','从此录音 ●');recordFrom.type='button';
-      recordFrom.addEventListener('click',()=>startRecording(fromBeat));
-      barActions.append(playFrom,recordFrom);box.append(barActions);
+      const box=node('div',undefined,'jp-bar');box.dataset.bar=String(bar);box.tabIndex=0;
+      box.setAttribute('aria-label',`第 ${bar} 小节，点击选择`);
+      if(bar===selectedBar)box.classList.add('is-selected');
+      box.addEventListener('click',()=>selectBar(bar));
+      box.addEventListener('keydown',event=>{if(event.target===box&&(event.key==='Enter'||event.key===' ')){
+        event.preventDefault();selectBar(bar);}});
+      box.append(node('small',`小节 ${bar}`));
       const chord=score.chords.find(x=>x.bar===bar);
       const chordEdit=node('div',undefined,'jp-inline-chord');
       const root=node('select');root.setAttribute('aria-label',`第 ${bar} 小节和弦根音`);
@@ -200,14 +215,18 @@
         const cell=node('div',undefined,'jp-note-edit');
         const symbol=node('button',C.jianpu(note.midi,score.key,score.mode));symbol.type='button';symbol.title='点击定位到音符详细编辑';
         symbol.append(node('small',`${note.durationBeats}拍`));
-        symbol.addEventListener('click',()=>{const row=document.getElementById(`note-${note.id}`);row?.scrollIntoView({behavior:'smooth',block:'center'});row?.querySelector('input[type=number]')?.focus();});
-        const pitch=node('input');pitch.type='number';pitch.min=36;pitch.max=96;pitch.value=note.midi;
-        pitch.setAttribute('aria-label',`第 ${bar} 小节音符音高 MIDI`);
-        pitch.addEventListener('change',()=>{note.midi=Math.max(36,Math.min(96,Math.round(Number(pitch.value)||60)));renderPreview();renderNotes();scheduleSave();});
+        symbol.addEventListener('click',()=>{$('advanced-editor').open=true;const row=document.getElementById(`note-${note.id}`);row?.scrollIntoView({behavior:'smooth',block:'center'});row?.querySelector('input[type=number]')?.focus();});
+        const pitchActions=node('div',undefined,'jp-pitch-actions');
+        for(const [direction,label] of [[-1,'−'],[1,'＋']]){
+          const step=node('button',label);step.type='button';
+          step.setAttribute('aria-label',`第 ${bar} 小节音符${direction<0?'降低':'升高'}一个音级`);
+          step.addEventListener('click',()=>{note.midi=C.stepScaleMidi(note.midi,score.key,score.mode,direction);
+            renderPreview();renderNotes();scheduleSave();});pitchActions.append(step);
+        }
         const lyric=node('input');lyric.type='text';lyric.maxLength=40;lyric.value=note.lyric||'';lyric.placeholder='歌词';
         lyric.setAttribute('aria-label',`第 ${bar} 小节音符歌词`);
         lyric.addEventListener('input',()=>{note.lyric=lyric.value;scheduleSave();});
-        cell.append(symbol,pitch,lyric);
+        cell.append(symbol,pitchActions,lyric);
         line.append(cell);
       }
       box.append(line);bars.append(box);
@@ -286,7 +305,7 @@
     for(const chord of [...score.chords].sort((a,b)=>a.bar-b.bar)) {
       const row=node('article');row.append(node('strong',`小节 ${chord.bar} · ${C.chordName(chord.root,chord.quality)}`),
         node('small',C.chordNotes(chord.root,chord.quality).join(' · ')));
-      const edit=node('button','载入修改');edit.type='button';edit.addEventListener('click',()=>{$('chord-bar').value=chord.bar;$('chord-root').value=chord.root;$('chord-quality').value=chord.quality;$('add-chord').focus();});
+      const edit=node('button','载入修改');edit.type='button';edit.addEventListener('click',()=>{$('advanced-editor').open=true;$('chord-bar').value=chord.bar;$('chord-root').value=chord.root;$('chord-quality').value=chord.quality;$('add-chord').focus();});
       const remove=node('button','删除');remove.type='button';remove.addEventListener('click',()=>{score.chords=score.chords.filter(x=>x!==chord);renderChords();renderPreview();scheduleSave();});
       const actions=node('div',undefined,'jp-actions');actions.append(edit,remove);row.append(actions);list.append(row);
     }
@@ -295,6 +314,7 @@
   function renderAll() {
     $('score-title').value=score.title;$('score-key').value=score.key;$('score-mode').value=score.mode;
     $('score-bpm').value=score.bpm;$('score-meter').value=score.meter;$('score-idea').value=score.idea;
+    $('selected-bar').value=selectedBar;$('bar-selection-status').textContent=`第 ${selectedBar} 小节已选中`;
     renderSegments();renderNotes();renderChords();renderPreview();updatePicker();playerUi();
   }
   function safeName(value) {return String(value).replace(/[\\/:*?"<>|]/g,'-').slice(0,80)||'JUNAF';}
@@ -304,7 +324,7 @@
   }
   async function choose(id) {
     stopPlayback();
-    barPage=0;
+    barPage=0;selectedBar=1;
     clearTimeout(saveTimer);if(score)await saveScore(score);
     if(account){try{score=(await request(`/scores/${id}`)).score;}catch(error){status(error.message);return;}}
     else score=guestScores().find(x=>x.id===id);
@@ -328,7 +348,7 @@
       recorder.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data);};
       recorder.onstop=async()=>{
         clearInterval(recording?.timer);stream.getTracks().forEach(track=>track.stop());await context.close().catch(()=>{});
-        $('record-toggle').textContent='开始录音 ●';$('record-toggle').disabled=false;
+        $('record-toggle').textContent='从曲尾录音 ●';$('record-toggle').disabled=false;
         $('score-picker').disabled=false;$('new-score').disabled=false;$('delete-score').disabled=false;recording=null;
         const durationMs=Math.round(performance.now()-started),mime=recorder.mimeType.split(';')[0]||'audio/webm';
         const blob=new Blob(chunks,{type:mime});
@@ -357,14 +377,18 @@
       recording={recorder,timer};$('record-toggle').disabled=false;$('record-toggle').textContent='结束本段 ■';
       $('score-picker').disabled=true;$('new-score').disabled=true;$('delete-score').disabled=true;
       $('record-status').textContent=fromBeat===null?'正在录音与分析单声部音高…':`正在从第 ${Math.floor(fromBeat/C.beatCount(score.meter))+1} 小节录音；原有音符会保留…`;
+      if(fromBeat!==null)document.querySelector('.jp-record').scrollIntoView({behavior:'smooth',block:'start'});
     }catch(error){stream?.getTracks().forEach(track=>track.stop());$('record-toggle').disabled=false;$('record-status').textContent=`无法开始录音：${error.message}`;}
   }
   function bind() {
     $('play-score').addEventListener('click',()=>playScore());
     $('stop-score').addEventListener('click',stopPlayback);
     $('play-chords').addEventListener('change',()=>{stopPlayback();playerUi();});
+    $('selected-bar').addEventListener('change',event=>selectBar(event.target.value));
+    $('play-selected').addEventListener('click',()=>playScore((selectedBar-1)*C.beatCount(score.meter),true));
+    $('record-selected').addEventListener('click',()=>startRecording((selectedBar-1)*C.beatCount(score.meter)));
     $('score-picker').addEventListener('change',e=>choose(e.target.value));
-    $('new-score').addEventListener('click',async()=>{stopPlayback();barPage=0;clearTimeout(saveTimer);if(score)await saveScore(score);score=freshScore();renderAll();await saveScore(score);});
+    $('new-score').addEventListener('click',async()=>{stopPlayback();barPage=0;selectedBar=1;clearTimeout(saveTimer);if(score)await saveScore(score);score=freshScore();renderAll();await saveScore(score);});
     $('delete-score').addEventListener('click',async()=>{if(!score||!confirm(`删除曲谱“${score.title}”及其录音？`))return;
       const id=score.id;stopPlayback();try{if(account)await request(`/scores/${id}`,'DELETE');else localStorage.setItem(GUEST_KEY,JSON.stringify(guestScores().filter(x=>x.id!==id)));
         summaries=summaries.filter(x=>x.id!==id);score=null;
@@ -378,10 +402,17 @@
     $('record-toggle').addEventListener('click',()=>{if(recording){if(recording.recorder.state==='recording'){
       $('record-toggle').disabled=true;recording.recorder.stop();}}else startRecording();});
     $('add-note').addEventListener('click',()=>{if(score.notes.length>=1500){status('当前曲谱最多 1500 个音符');return;}
-      const segment=score.segments.at(-1),start=Math.ceil(Math.max(0,...score.notes.map(n=>n.startBeat+n.durationBeats)));
-      score.notes.push({id:uuid(),segmentId:segment.id,midi:60+score.key,startBeat:start,durationBeats:1});renderAll();scheduleSave();});
+      const segment=score.segments.at(-1),beats=C.beatCount(score.meter),barStart=(selectedBar-1)*beats,barEnd=barStart+beats;
+      const notes=score.notes.filter(n=>n.startBeat>=barStart&&n.startBeat<barEnd);
+      const start=Math.max(barStart,...notes.map(n=>n.startBeat+n.durationBeats));
+      if(start>=barEnd){status('本小节已排满；可调整已有音符的起拍或时值');return;}
+      score.notes.push({id:uuid(),segmentId:segment.id,midi:60+score.key,startBeat:start,
+        durationBeats:Math.min(1,barEnd-start),lyric:''});renderAll();scheduleSave();});
     $('suggest-chords').addEventListener('click',()=>{if(!score.notes.length){status('请先录音或添加音符');return;}
-      score.chords=C.suggestChords(score);renderChords();renderPreview();scheduleSave();});
+      const used=new Set(score.chords.map(chord=>chord.bar));
+      const additions=C.suggestChords(score).filter(chord=>!used.has(chord.bar)).slice(0,200-score.chords.length);
+      if(!additions.length){status('已有和弦已保留，没有需要补充的小节');return;}
+      score.chords.push(...additions);renderChords();renderPreview();scheduleSave();});
     $('add-chord').addEventListener('click',()=>{const bar=Math.max(1,Math.round(Number($('chord-bar').value)||1));
       score.chords=score.chords.filter(x=>x.bar!==bar);score.chords.push({bar,root:Number($('chord-root').value),quality:$('chord-quality').value});
       renderChords();renderPreview();scheduleSave();});

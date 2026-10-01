@@ -26,6 +26,12 @@
       root:mod(root+offset,12),quality:DIATONIC[mode][i]}));
   }
   function noteName(midi) {return `${ROOTS[mod(midi,12)]}${Math.floor(midi/12)-1}`;}
+  function stepScaleMidi(midi,key,mode,direction) {
+    const scale=SCALES[mode]||SCALES.major,step=direction<0?-1:1;
+    for(let candidate=midi+step;candidate>=36&&candidate<=96;candidate+=step)
+      if(scale.includes(mod(candidate-key,12)))return candidate;
+    return midi;
+  }
   function jianpu(midi,key,mode) {
     const pitch = mod(midi-key,12), scale = SCALES[mode] || SCALES.major;
     let degree = scale.indexOf(pitch), accidental = '';
@@ -170,7 +176,7 @@
     nodes.push(`<text x="44" y="${height-24}" font-family="sans-serif" font-size="11" fill="#999">JUNAF / TOOLS / 简谱</text></svg>`);
     return nodes.join('');
   }
-  const api={ROOTS,QUALITY,SCALES,DIATONIC,beatCount,chordName,chordNotes,keyChords,noteName,
+  const api={ROOTS,QUALITY,SCALES,DIATONIC,beatCount,chordName,chordNotes,keyChords,noteName,stepScaleMidi,
     jianpu,detectPitch,framesToNotes,suggestChords,playbackEvents,scoreText,scoreSvg};
   if (typeof module!=='undefined'&&module.exports) module.exports=api;
   if (typeof window!=='undefined') window.JunafJianpuCore=api;
