@@ -199,12 +199,13 @@
   });
   $('#login-form').addEventListener('submit', async event => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     const button = event.submitter;
     button.disabled = true;
     try {
-      const form = new FormData(event.currentTarget);
+      const form = new FormData(formElement);
       renderAccount(await request('/login', 'POST', Object.fromEntries(form)));
-      event.currentTarget.reset();
+      formElement.reset();
       returnToTool();
     } catch (error) { message(error.message); }
     finally { button.disabled = false; }
@@ -229,7 +230,7 @@
       const payload = Object.fromEntries(form);
       delete payload.passwordConfirm;
       renderAccount(await request('/register', 'POST', payload));
-      event.currentTarget.reset();
+      formElement.reset();
       returnToTool();
     } catch (error) { registrationMessage(error.message); }
     finally { button.disabled = false; }
@@ -241,16 +242,17 @@
   $('#payment-form').addEventListener('submit', async event => {
     event.preventDefault();
     if (!selectedStore || !selectedOrder) return;
+    const formElement = event.currentTarget;
     const button = event.submitter;
     button.disabled = true;
     try {
-      const form = new FormData(event.currentTarget);
+      const form = new FormData(formElement);
       const paymentRef = String(form.get('paymentRef') || '').trim();
       if (!/^[0-9]{6}$/.test(paymentRef)) throw Error('请输入交易单号后6位数字');
       const result = await shop(`/orders/${encodeURIComponent(selectedOrder.id)}/payment`,
         selectedStore.id, 'POST', {paymentRef, paidAt: form.get('paidAt'), confirmPayment: true});
       $('#checkout').hidden = true;
-      event.currentTarget.reset();
+      formElement.reset();
       await showStore(selectedStore);
       message(result.trialExpiresAt ? '付款信息已提交，临时权益已生效；等待人工核款' :
         result.collisionFlag ? '交易尾号重复，临时权益暂缓；等待人工核对' : '付款信息已提交，等待人工核款');
