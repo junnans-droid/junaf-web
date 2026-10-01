@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#eae7de">
+  <meta name="description" content="JUNAF 档期工作台：记录预约、项目、日程、收款、联系人和待办。">
+  <title>档期工作台 — JUNAF Tools</title>
+  <link rel="stylesheet" href="/tools/booking/style.css?v=20261001-1">
+</head>
+<body>
+  <div id="app" class="app" hidden>
+    <aside class="side"><a class="brand" href="/">JUNAF<span>.</span><small>TOOLS / BOOKING</small></a><nav id="nav" aria-label="工作台导航"></nav><div class="side-foot"><a href="/tools/">← 返回 Tools</a><div id="accountName"></div></div></aside>
+    <div class="work"><header class="top"><button class="mobile-menu" id="mobileMenu" aria-label="打开导航">☰</button><div class="top-title" id="topTitle">档期工作台</div><input id="search" type="search" placeholder="搜索预约、联系人、项目…" aria-label="搜索"><button class="btn gold" id="newButton">＋ 新建预约</button></header><main id="main"></main></div>
+  </div>
+  <div id="auth" class="auth" hidden><div class="brand">JUNAF<span>.</span><small>TOOLS / BOOKING</small></div><h1>登录后使用档期工作台</h1><p>预约、联系人与收款记录只保存在你的 JUNAF 账号下。</p><a class="btn gold" href="/account/?next=%2Ftools%2Fbooking%2F">前往登录 ↗</a></div>
+  <dialog id="modal"><form id="modalForm"><div class="modal-head"><h2 id="modalTitle"></h2><button type="button" class="icon" id="closeModal" aria-label="关闭">✕</button></div><div id="modalError" class="error" role="alert"></div><div id="modalFields" class="fields"></div><div class="modal-foot"><button type="button" class="btn" id="cancelModal">取消</button><button type="submit" class="btn gold">保存</button></div></form></dialog>
+  <div id="toast" role="status"></div>
+  <script src="/tools/booking/app.js?v=20261001-1" defer></script>
+</body>
+</html>
