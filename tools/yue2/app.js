@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
 const $=id=>document.getElementById(id);
-let busy=false, refreshing=false, jobs=[], workerOnline=false, canSubmit=false;
+let busy=false, refreshing=false, jobs=[], workerOnline=false, canSubmit=false, notice='';
 
 async function api(path,options={}){
   const controller=new AbortController();
@@ -40,7 +40,8 @@ async function refresh(){
     jobs=Array.isArray(data.jobs)?data.jobs:[];workerOnline=!!data.workerOnline;canSubmit=!!data.canSubmit;
     $('workspace').hidden=false;$('login').hidden=true;render();
     if(!busy){
-      if(!canSubmit)status(data.adminOnly?'音乐生成正在内部测试':'音乐生成暂未开放');
+      if(notice)status(notice);
+      else if(!canSubmit)status(data.adminOnly?'当前仅管理员账号可用，请到用户中心切换账号。':'音乐生成暂未开放');
       else if(!workerOnline)status('生成服务器当前未开机。开机后此页面会自动恢复。');
       else if(jobs.some(job=>['queued','running'].includes(job.status)))status('任务正在处理中，页面会自动更新。');
       else status('准备就绪');
@@ -52,13 +53,20 @@ async function refresh(){
 }
 $('generate-form').onsubmit=async event=>{
   event.preventDefault();if(busy||!canSubmit||!workerOnline)return;
+  notice='';
+  const style=$('style').value.trim(),lyrics=$('lyrics').value.trim();
+  if(style.length<8||lyrics.length<8){notice='声音方向和原创歌词都需要至少 8 个字。';status(notice);return}
   busy=true;updateButton();status('正在提交…');
   try{
-    const style=$('style').value.trim(),lyrics=$('lyrics').value.trim();
     await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({style,lyrics})});
     status('任务已提交，正在等待生成');
-  }catch(error){status(error.message)}
+  }catch(error){notice=error.message;status(notice)}
   finally{busy=false;updateButton();await refresh()}
 };
+$('generate-form').addEventListener('invalid',event=>{
+  notice=event.target.id==='style'?'声音方向至少填写 8 个字。':'原创歌词至少填写 8 个字。';
+  status(notice);
+},true);
+for(const field of [$('style'),$('lyrics')])field.addEventListener('input',()=>{if(notice){notice='';status('准备就绪')}});
 refresh();setInterval(()=>{if(document.visibilityState==='visible')refresh()},5000);
 })();
