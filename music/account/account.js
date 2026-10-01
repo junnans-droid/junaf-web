@@ -14,7 +14,6 @@
   let selectedStore = null;
   let selectedOrder = null;
   let saleCatalog = null;
-  let emailVerificationRequired = false;
   let emailCountdown = null;
   let deviceId = localStorage.getItem('junaf_music_device');
   if (!/^[a-f0-9]{32}$/.test(deviceId || '')) {
@@ -166,9 +165,6 @@
     try {
       const config = await request('/config');
       $('#registration').hidden = !config.registrationEnabled;
-      emailVerificationRequired = config.emailVerificationRequired === true;
-      $('#email-verification').hidden = !emailVerificationRequired;
-      $('#email-verification input').required = emailVerificationRequired;
     } catch { $('#registration').hidden = true; }
   }
   $('#send-email-code').addEventListener('click', async event => {
