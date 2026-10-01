@@ -107,7 +107,7 @@
     }
     return suggestions;
   }
-  function playbackEvents(score,includeChords=true) {
+  function playbackEvents(score,includeChords=true,fromBeat=0) {
     const events=score.notes.map(note=>({type:'note',midi:note.midi,startBeat:note.startBeat,
       durationBeats:note.durationBeats,noteId:note.id}));
     if(includeChords)for(const chord of score.chords) {
@@ -117,7 +117,10 @@
         events.push({type:'chord',midi:root+interval,startBeat,
           durationBeats:beatCount(score.meter)*.9});
     }
-    return events.sort((a,b)=>a.startBeat-b.startBeat || (a.type==='chord')-(b.type==='chord'));
+    return events.filter(event=>event.startBeat+event.durationBeats>fromBeat)
+      .map(event=>({...event,startBeat:Math.max(event.startBeat,fromBeat)-fromBeat,
+        durationBeats:event.startBeat+event.durationBeats-Math.max(event.startBeat,fromBeat)}))
+      .sort((a,b)=>a.startBeat-b.startBeat || (a.type==='chord')-(b.type==='chord'));
   }
   function scoreText(score) {
     const lines=[`JUNAF 简谱｜${score.title}`,`调性：${ROOTS[score.key]} ${score.mode==='major'?'大调':'小调'}  速度：${score.bpm} BPM  拍号：${score.meter}`,''];
