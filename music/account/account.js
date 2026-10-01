@@ -13,6 +13,8 @@
   let selectedStore = null;
   let selectedOrder = null;
   let saleCatalog = null;
+  let emailVerificationRequired = false;
+  let emailCountdown = null;
   let deviceId = localStorage.getItem('junaf_music_device');
   if (!/^[a-f0-9]{32}$/.test(deviceId || '')) {
     deviceId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte =>
@@ -163,8 +165,32 @@
     try {
       const config = await request('/config');
       $('#registration').hidden = !config.registrationEnabled;
+      emailVerificationRequired = config.emailVerificationRequired === true;
+      $('#email-verification').hidden = !emailVerificationRequired;
+      $('#email-verification input').required = emailVerificationRequired;
     } catch { $('#registration').hidden = true; }
   }
+  $('#send-email-code').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    const email = $('#register-form [name="email"]');
+    if (!email.reportValidity()) return;
+    button.disabled = true;
+    try {
+      await request('/email-code', 'POST', {email: email.value.trim()});
+      message('验证码已发送，请查看邮箱；10 分钟内有效');
+      let remaining = 60;
+      button.textContent = `${remaining} 秒后重发`;
+      clearInterval(emailCountdown);
+      emailCountdown = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(emailCountdown);
+          button.disabled = false;
+          button.textContent = '重新发送验证码';
+        } else button.textContent = `${remaining} 秒后重发`;
+      }, 1000);
+    } catch (error) { button.disabled = false; message(error.message); }
+  });
   $('#login-form').addEventListener('submit', async event => {
     event.preventDefault();
     const button = event.submitter;
