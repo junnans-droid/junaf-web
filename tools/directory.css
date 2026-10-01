@@ -1,0 +1,22 @@
+.tools-page .tools-hero{min-height:0;height:auto;padding-top:7rem;padding-bottom:2.5rem;gap:1rem}
+.tools-page .tools-hero h1{margin:1.3rem 0;font-size:clamp(3.6rem,6.3vw,6.5rem)}
+.tools-page .tools-directory{padding-top:2.5rem}
+.tools-page .tools-directory .kicker{margin-bottom:1.5rem}
+.tools-page .directory-title h2{font-size:clamp(2.8rem,5vw,5rem)}
+.tools-page .directory-title p{align-self:end;color:var(--muted);line-height:1.8}
+.tool-jump{position:static;inset:auto;display:flex;flex-direction:row;flex-wrap:wrap;gap:.6rem;margin:1.8rem 0 1.5rem;padding:0;background:transparent;border:0}
+.tools-page .tools-hero .tool-jump{margin:0;padding-top:.6rem}
+.tool-jump a{text-decoration:none;border:1px solid var(--line);padding:.65rem .9rem;font-size:.77rem;letter-spacing:.04em;transition:background .2s,color .2s}
+.tool-jump a:hover,.tool-jump a:focus-visible{background:var(--ink);color:var(--paper)}
+.tool-tile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.tool-tile{min-height:228px;padding:1.3rem;display:flex;flex-direction:column;text-decoration:none;border-right:1px solid var(--line);border-bottom:1px solid var(--line);scroll-margin-top:6rem;transition:background .2s,color .2s}
+.tool-tile:hover,.tool-tile:focus-visible{background:var(--ink);color:var(--paper)}
+.tool-tile-top{display:flex;justify-content:space-between;font-size:.65rem;letter-spacing:.13em;color:var(--muted)}
+.tool-tile-top b{font-weight:400}.tool-tile-top span{font-size:1.25rem;color:var(--red)}
+.tool-tile strong{font-size:clamp(1.5rem,2.7vw,2.4rem);font-weight:400;letter-spacing:-.04em;margin:auto 0 .25rem}
+.tool-tile small{font-size:.67rem;letter-spacing:.12em;color:var(--red)}
+.tool-tile-desc{font-size:.74rem;color:var(--muted);margin-top:1.35rem}
+.tool-tile:hover .tool-tile-desc,.tool-tile:hover .tool-tile-top,.tool-tile:focus-visible .tool-tile-desc,.tool-tile:focus-visible .tool-tile-top{color:#bbb}
+@media(max-width:850px){.tool-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.tools-page .tools-hero{min-height:0;padding-top:6.5rem;padding-bottom:2rem}.tools-page .tools-hero h1{font-size:clamp(3.25rem,12vw,5rem)}.tools-page .tools-directory{padding-top:2rem}.tools-page .directory-title{grid-template-columns:1fr;gap:1rem}.tool-jump{margin-top:2rem}.tool-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tool-tile{min-height:180px;padding:1rem}.tool-tile strong{font-size:1.5rem}.tool-tile-desc{line-height:1.5;margin-top:1rem}}
+@media(max-width:390px){.tool-tile-grid{grid-template-columns:1fr}.tool-tile{min-height:145px}}
