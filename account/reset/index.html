@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#eae7de"><meta name="robots" content="noindex,nofollow">
+  <title>找回密码 — JUNAF</title>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/music/account/style.css?v=20261001-3">
+</head>
+<body class="account-page">
+  <a class="skip" href="#main">跳至正文</a>
+  <header id="header"><a class="brand" href="/">JUNAF<span>.</span></a><nav id="nav" aria-label="主导航"><a href="/">首页</a><a href="/music/">Music</a><a href="/account/">用户中心</a><a href="/tools/">Tools</a></nav><span class="header-note">JUNAF / ACCOUNT</span><button id="menu" aria-controls="nav" aria-expanded="false">菜单</button></header>
+  <main id="main"><section class="account-hero"><div class="kicker"><span>JUNAF / PERSONAL</span><span>ACCOUNT RECOVERY</span></div><h1>重新开始，<br><em>从这里<span class="accent">。</span></em></h1><p>使用注册邮箱接收验证码，设置一个新密码。重设后请重新登录。</p></section>
+    <section class="account-workspace"><div class="kicker"><span>01 / 找回密码</span><span>RESET PASSWORD</span></div><h2>验证你的邮箱</h2>
+      <form id="reset-form" novalidate>
+        <label>注册邮箱<input name="email" type="email" autocomplete="email" required></label>
+        <button id="send-reset-code" type="button">发送验证码</button>
+        <p class="registration-note">验证码 10 分钟内有效。若未收到，请检查垃圾邮件箱。</p>
+        <label>邮箱验证码<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6 位验证码" required></label>
+        <label>新密码（至少 12 位）<input name="password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <label>确认新密码<input name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" required></label>
+        <p id="reset-message" class="registration-message" role="status" aria-live="polite"></p>
+        <button id="submit-reset" type="submit">重设密码 →</button>
+        <a class="account-reset-link" href="/account/">返回登录 ↗</a>
+      </form>
+    </section>
+  </main>
+  <footer><div><a class="footer-brand" href="/">JUNAF<span>.</span></a><p>未来需要一种新的语言。</p></div><div class="footer-links"><a href="/">首页</a><a href="/music/">Music</a><a href="/tools/">Tools</a></div><div class="meta">© 2026 JUNAF<br>ART / DESIGN / CONSTRUCTION</div></footer>
+  <script src="/site.js" defer></script><script src="/account/reset/reset.js?v=20261001-1" defer></script>
+</body>
+</html>
