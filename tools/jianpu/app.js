@@ -8,7 +8,7 @@
   const node = (tag,text,className) => {const x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(className)x.className=className;return x;};
   const uuid = () => crypto.randomUUID();
   const status = text => { $('save-status').textContent = text; };
-  let account=null,summaries=[],score=null,saveTimer=null,saveQueue=Promise.resolve(),recording=null,playback=null;
+  let account=null,summaries=[],score=null,saveTimer=null,saveQueue=Promise.resolve(),recording=null,playback=null,barPage=0;
   const localAudio=new Map(),pendingAudio=new Map();
   function freshScore() {
     return {id:uuid(),title:'未命名旋律',key:0,mode:'major',bpm:90,meter:'4/4',idea:'',
@@ -60,7 +60,7 @@
     const total=playback?.totalSeconds||Math.max(0,...C.playbackEvents(score||{notes:[],chords:[],meter:'4/4'},$('play-chords').checked)
       .map(x=>x.startBeat+x.durationBeats))*60/(score?.bpm||90);
     const elapsed=playback?Math.min(total,Math.max(0,playback.context.currentTime-playback.startTime)):0;
-    $('play-progress').textContent=`${playerTime(elapsed)} / ${playerTime(total)}`;
+    $('play-progress').textContent=`${playback?.fromBeat?`第 ${Math.floor(playback.fromBeat/C.beatCount(score.meter))+1} 小节 · `:''}${playerTime(elapsed)} / ${playerTime(total)}`;
   }
   function stopPlayback() {
     if(!playback)return;
@@ -82,7 +82,8 @@
     oscillator.start(start);oscillator.stop(start+duration+.01);
     oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
   }
-  async function playScore() {
+  async function playScore(fromBeat=0,restart=false) {
+    if(playback&&restart)stopPlayback();
     if(playback){
       try {if(playback.paused){await playback.context.resume();playback.paused=false;}
         else {await playback.context.suspend();playback.paused=true;}playerUi();}
@@ -90,15 +91,15 @@
       return;
     }
     if(recording){status('请先结束录音，再播放曲谱');return;}
-    const events=C.playbackEvents(score,$('play-chords').checked);
-    if(!events.length){status('曲谱还没有音符或和弦');return;}
+    const events=C.playbackEvents(score,$('play-chords').checked,fromBeat);
+    if(!events.length){status('从此小节起没有可播放的音符或和弦');return;}
     const Audio=window.AudioContext||window.webkitAudioContext;
     if(!Audio){status('此浏览器不支持曲谱播放');return;}
     try {
       const context=new Audio();await context.resume();
       const beatSeconds=60/score.bpm,startTime=context.currentTime+.08;
       const endBeat=Math.max(...events.map(x=>x.startBeat+x.durationBeats));
-      const session={context,events,index:0,startTime,beatSeconds,endBeat,
+      const session={context,events,index:0,startTime,beatSeconds,endBeat,fromBeat,
         totalSeconds:endBeat*beatSeconds,paused:false,timer:null};
       playback=session;
       const tick=()=>{
@@ -164,14 +165,22 @@
   function renderPreview() {
     const preview=$('score-preview');preview.replaceChildren();
     preview.append(node('div',`1=${C.ROOTS[score.key]} ${score.mode==='major'?'大调':'小调'} · ${score.meter} · ♩=${score.bpm}`,'jp-preview-head'));
-    if(!score.notes.length&&!score.chords.length){preview.append(node('p','尚无音符。开始录音或手动添加音符。'));return;}
     const beats=C.beatCount(score.meter);
-    const allBarNumbers=[...new Set([...score.notes.map(n=>Math.floor(n.startBeat/beats)+1),
-      ...score.chords.map(chord=>chord.bar)])].sort((a,b)=>a-b);
-    const barNumbers=allBarNumbers.slice(0,128);
+    const lastBar=Math.max(1,...score.notes.map(n=>Math.floor((n.startBeat+n.durationBeats-.001)/beats)+1),
+      ...score.chords.map(chord=>chord.bar));
+    barPage=Math.min(barPage,Math.floor((lastBar-1)/128));
+    const firstBar=barPage*128+1,lastShown=Math.min(lastBar,firstBar+127);
+    const barNumbers=Array.from({length:lastShown-firstBar+1},(_,i)=>firstBar+i);
     const bars=node('div',undefined,'jp-bars');
     for(const bar of barNumbers) {
       const box=node('div',undefined,'jp-bar');box.append(node('small',`小节 ${bar}`));
+      const barActions=node('div',undefined,'jp-bar-actions');
+      const fromBeat=(bar-1)*beats;
+      const playFrom=node('button','从此播放 ▶');playFrom.type='button';
+      playFrom.addEventListener('click',()=>playScore(fromBeat,true));
+      const recordFrom=node('button','从此录音 ●');recordFrom.type='button';
+      recordFrom.addEventListener('click',()=>startRecording(fromBeat));
+      barActions.append(playFrom,recordFrom);box.append(barActions);
       const chord=score.chords.find(x=>x.bar===bar);
       const chordEdit=node('div',undefined,'jp-inline-chord');
       const root=node('select');root.setAttribute('aria-label',`第 ${bar} 小节和弦根音`);
@@ -204,7 +213,15 @@
       box.append(line);bars.append(box);
     }
     preview.append(bars);
-    if(allBarNumbers.length>128)preview.append(node('p','这里只显示前 128 个有内容的小节；导出文件包含完整曲谱。'));
+    if(lastBar>128){
+      const pages=node('div',undefined,'jp-bar-pages');
+      const previous=node('button','上一组小节');previous.type='button';previous.disabled=barPage===0;
+      previous.addEventListener('click',()=>{barPage--;renderPreview();});
+      const next=node('button','下一组小节');next.type='button';next.disabled=lastShown>=lastBar;
+      next.addEventListener('click',()=>{barPage++;renderPreview();});
+      pages.append(previous,node('span',`显示第 ${firstBar}–${lastShown} 小节，共 ${lastBar} 小节`),next);
+      preview.append(pages);
+    }
   }
   function renderSegments() {
     const list=$('segment-list');list.replaceChildren();
@@ -287,12 +304,14 @@
   }
   async function choose(id) {
     stopPlayback();
+    barPage=0;
     clearTimeout(saveTimer);if(score)await saveScore(score);
     if(account){try{score=(await request(`/scores/${id}`)).score;}catch(error){status(error.message);return;}}
     else score=guestScores().find(x=>x.id===id);
     if(score)renderAll();
   }
-  async function startRecording() {
+  async function startRecording(fromBeat=null) {
+    if(recording){$('record-status').textContent='请先结束当前录音';return;}
     stopPlayback();
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$('record-status').textContent='此浏览器不支持录音；可手动添加音符。';return;}
     if(score.segments.length>=30){$('record-status').textContent='当前曲谱已达到 30 个段落上限，请新建曲谱。';return;}
@@ -315,7 +334,7 @@
         const blob=new Blob(chunks,{type:mime});
         if(blob.size<100){$('record-status').textContent='录音过短，请再试一次。';return;}
         const segmentId=uuid(),name=$('segment-name').value.trim()||`段落 ${score.segments.length}`;
-        const offset=Math.ceil(Math.max(0,...score.notes.map(n=>n.startBeat+n.durationBeats)));
+        const offset=fromBeat===null?Math.ceil(Math.max(0,...score.notes.map(n=>n.startBeat+n.durationBeats))):fromBeat;
         const stable=frames.map((frame,i)=>{
           const nearby=frames.slice(Math.max(0,i-1),i+2).map(x=>x.midi).filter(x=>x!==null).sort((a,b)=>a-b);
           return {...frame,midi:nearby.length>=2?nearby[Math.floor(nearby.length/2)]:frame.midi};
@@ -323,7 +342,7 @@
         const recognized=C.framesToNotes(stable,score.bpm,offset,segmentId).slice(0,1500-score.notes.length);
         score.segments.push({id:segmentId,name,durationMs});score.notes.push(...recognized);
         const key=`${score.id}:${segmentId}`;localAudio.set(key,URL.createObjectURL(blob));pendingAudio.set(key,blob);
-        $('segment-name').value='';$('record-status').textContent=`已保存段落：识别 ${recognized.length} 个音符。请在下方校对。`;
+        $('segment-name').value='';$('record-status').textContent=`已保存段落：从第 ${Math.floor(offset/C.beatCount(score.meter))+1} 小节开始，识别 ${recognized.length} 个音符。请在下方校对。`;
         renderAll();await saveScore(score);
       };
       recorder.start(1000);
@@ -337,15 +356,15 @@
       },80);
       recording={recorder,timer};$('record-toggle').disabled=false;$('record-toggle').textContent='结束本段 ■';
       $('score-picker').disabled=true;$('new-score').disabled=true;$('delete-score').disabled=true;
-      $('record-status').textContent='正在录音与分析单声部音高…';
+      $('record-status').textContent=fromBeat===null?'正在录音与分析单声部音高…':`正在从第 ${Math.floor(fromBeat/C.beatCount(score.meter))+1} 小节录音；原有音符会保留…`;
     }catch(error){stream?.getTracks().forEach(track=>track.stop());$('record-toggle').disabled=false;$('record-status').textContent=`无法开始录音：${error.message}`;}
   }
   function bind() {
-    $('play-score').addEventListener('click',playScore);
+    $('play-score').addEventListener('click',()=>playScore());
     $('stop-score').addEventListener('click',stopPlayback);
     $('play-chords').addEventListener('change',()=>{stopPlayback();playerUi();});
     $('score-picker').addEventListener('change',e=>choose(e.target.value));
-    $('new-score').addEventListener('click',async()=>{stopPlayback();clearTimeout(saveTimer);if(score)await saveScore(score);score=freshScore();renderAll();await saveScore(score);});
+    $('new-score').addEventListener('click',async()=>{stopPlayback();barPage=0;clearTimeout(saveTimer);if(score)await saveScore(score);score=freshScore();renderAll();await saveScore(score);});
     $('delete-score').addEventListener('click',async()=>{if(!score||!confirm(`删除曲谱“${score.title}”及其录音？`))return;
       const id=score.id;stopPlayback();try{if(account)await request(`/scores/${id}`,'DELETE');else localStorage.setItem(GUEST_KEY,JSON.stringify(guestScores().filter(x=>x.id!==id)));
         summaries=summaries.filter(x=>x.id!==id);score=null;
