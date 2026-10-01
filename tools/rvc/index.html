@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#eae7de">
+  <meta name="description" content="JUNAF RVC 音色实验：训练自己的音色，转换上传的录音。">
+  <title>音色实验 — JUNAF Tools</title>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/rvc/style.css?v=20261002-1">
+</head>
+<body class="rvc-page"><a class="skip" href="#main">跳至正文</a>
+  <header id="header"><a class="brand" href="/">JUNAF<span>.</span></a>
+    <nav id="nav" aria-label="主导航"><a href="/">首页</a><a href="/music/">Music</a><a href="/tools/" aria-current="page">Tools</a><a href="/account/">用户中心</a></nav>
+    <span class="header-note">JUNAF / VOICE EXPERIMENT</span><button id="menu" aria-controls="nav" aria-expanded="false">菜单</button>
+  </header>
+  <main id="main">
+    <section class="rvc-hero"><div class="kicker"><span>JUNAF / TOOLS 08</span><span>VOICE / TRAIN / TRANSFORM</span></div>
+      <h1>声音也可以，<br><em>重新构建<span class="accent">。</span></em></h1>
+      <p>用自己的录音训练音色，或用已准备的音色转换一段声音。训练与转换在 JUNAF 的 GPU 实例中完成。</p>
+      <div class="rvc-actions"><button id="enter" type="button">进入 RVC 工作台 ↗</button><a href="/tools/">返回工具目录</a></div>
+      <p id="status" role="status">工作台当前仅管理员账号可用。请先登录 JUNAF。</p>
+    </section>
+    <section class="rvc-grid" aria-label="使用步骤">
+      <article><span>01 / TRAIN</span><h2>训练自己的音色</h2><p>准备有权使用的干净人声录音，上传到训练集目录，再在工作台完成预处理、特征提取、训练和索引生成。</p></article>
+      <article><span>02 / CONVERT</span><h2>转换一段声音</h2><p>选择音色模型，上传音频，调整音高与索引比例，试听并保存转换结果。首次可选择已安装的示范音色。</p></article>
+      <article><span>03 / PRIVATE</span><h2>按需使用 GPU</h2><p>AutoDL 实例开机后工作台可用；关闭实例可停止计费。RVC 与 YuE2 共用一张 GPU，请错开大任务。</p></article>
+    </section>
+    <section class="rvc-note"><div class="kicker"><span>示范音色</span><span>LICENSE / ATTRIBUTION</span></div><p>已安装 Nova_HD_by_Kady，作者 Kady，采用 CC BY 4.0 许可。发布使用该音色制作的内容时，请保留作者署名。</p><a href="https://huggingface.co/Kady-x/Nova_HD_by_Kady" target="_blank" rel="noopener noreferrer">查看模型与许可 ↗</a></section>
+  </main>
+  <script src="/site.js" defer></script><script src="/tools/rvc/app.js?v=20261002-1" defer></script>
+</body></html>
