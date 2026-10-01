@@ -4,6 +4,10 @@
     ? 'http://127.0.0.1:3100' : 'https://api.junaf.com';
   const $ = selector => document.querySelector(selector);
   const message = value => { $('#account-message').textContent = value; };
+  const returnToTool = () => {
+    const next = new URLSearchParams(location.search).get('next');
+    if (next && /^\/tools\/[a-z0-9-]+\/$/.test(next)) location.assign(next);
+  };
   const orderStatus = {awaiting_payment: '待付款', submitted: '已提交付款信息', provisional: '临时权益中',
     approving: '核款处理中', approved: '已核款', rejected: '审核未通过', needs_info: '需补充信息'};
   let selectedStore = null;
@@ -169,6 +173,7 @@
       const form = new FormData(event.currentTarget);
       renderAccount(await request('/login', 'POST', Object.fromEntries(form)));
       event.currentTarget.reset();
+      returnToTool();
     } catch (error) { message(error.message); }
     finally { button.disabled = false; }
   });
@@ -178,8 +183,12 @@
     button.disabled = true;
     try {
       const form = new FormData(event.currentTarget);
-      renderAccount(await request('/register', 'POST', Object.fromEntries(form)));
+      if (form.get('password') !== form.get('passwordConfirm')) throw Error('两次输入的密码不一致');
+      const payload = Object.fromEntries(form);
+      delete payload.passwordConfirm;
+      renderAccount(await request('/register', 'POST', payload));
       event.currentTarget.reset();
+      returnToTool();
     } catch (error) { message(error.message); }
     finally { button.disabled = false; }
   });
