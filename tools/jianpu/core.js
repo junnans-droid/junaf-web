@@ -107,6 +107,18 @@
     }
     return suggestions;
   }
+  function playbackEvents(score,includeChords=true) {
+    const events=score.notes.map(note=>({type:'note',midi:note.midi,startBeat:note.startBeat,
+      durationBeats:note.durationBeats,noteId:note.id}));
+    if(includeChords)for(const chord of score.chords) {
+      const startBeat=(chord.bar-1)*beatCount(score.meter);
+      const root=48+mod(chord.root,12);
+      for(const interval of QUALITY[chord.quality]?.intervals||[])
+        events.push({type:'chord',midi:root+interval,startBeat,
+          durationBeats:beatCount(score.meter)*.9});
+    }
+    return events.sort((a,b)=>a.startBeat-b.startBeat || (a.type==='chord')-(b.type==='chord'));
+  }
   function scoreText(score) {
     const lines=[`JUNAF 简谱｜${score.title}`,`调性：${ROOTS[score.key]} ${score.mode==='major'?'大调':'小调'}  速度：${score.bpm} BPM  拍号：${score.meter}`,''];
     const beats=beatCount(score.meter);
@@ -114,7 +126,7 @@
     for (const note of [...score.notes].sort((a,b)=>a.startBeat-b.startBeat)) {
       const bar=Math.floor(note.startBeat/beats)+1;
       if (!bars.has(bar)) bars.set(bar,[]);
-      bars.get(bar).push(`${jianpu(note.midi,score.key,score.mode)}(${note.durationBeats}拍)`);
+      bars.get(bar).push(`${jianpu(note.midi,score.key,score.mode)}(${note.durationBeats}拍)${note.lyric?`「${note.lyric}」`:''}`);
     }
     const barNumbers=[...new Set([...bars.keys(),...score.chords.map(chord=>chord.bar)])].sort((a,b)=>a-b);
     for (const bar of barNumbers) {
@@ -145,7 +157,10 @@
       nodes.push(`<rect x="${x}" y="${y}" width="194" height="72" fill="none" stroke="#c7c4ba"/>`,
         `<text x="${x+8}" y="${y+17}" font-family="sans-serif" font-size="12" fill="#777">${bar}${chord?` · ${esc(chordName(chord.root,chord.quality))}`:''}</text>`);
       const shown=notes.slice(0,9);
-      shown.forEach((note,i)=>nodes.push(`<text x="${x+10+i*20}" y="${y+50}" font-family="sans-serif" font-size="20" fill="#171814">${esc(jianpu(note.midi,score.key,score.mode))}</text>`));
+      shown.forEach((note,i)=>{
+        nodes.push(`<text x="${x+10+i*20}" y="${y+43}" font-family="sans-serif" font-size="20" fill="#171814">${esc(jianpu(note.midi,score.key,score.mode))}</text>`);
+        if(note.lyric)nodes.push(`<text x="${x+10+i*20}" y="${y+63}" font-family="sans-serif" font-size="12" fill="#555">${esc(note.lyric.slice(0,2))}</text>`);
+      });
       if (notes.length>9) nodes.push(`<text x="${x+175}" y="${y+50}" font-size="12">…</text>`);
     }
     if (score.idea) nodes.push(`<text x="44" y="${135+lines*lineHeight}" font-family="sans-serif" font-size="13" fill="#555">创作笔记：${esc(score.idea.slice(0,100))}</text>`);
@@ -153,7 +168,7 @@
     return nodes.join('');
   }
   const api={ROOTS,QUALITY,SCALES,DIATONIC,beatCount,chordName,chordNotes,keyChords,noteName,
-    jianpu,detectPitch,framesToNotes,suggestChords,scoreText,scoreSvg};
+    jianpu,detectPitch,framesToNotes,suggestChords,playbackEvents,scoreText,scoreSvg};
   if (typeof module!=='undefined'&&module.exports) module.exports=api;
   if (typeof window!=='undefined') window.JunafJianpuCore=api;
 })();
