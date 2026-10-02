@@ -70,7 +70,7 @@
       if (!answer) throw new Error('模型未返回内容，请稍后重试。');
       outline.value += `\n\n—— AI 深化建议（请核对事实）——\n${answer}`;
       status.textContent='AI 建议已附在草图下方，可以继续编辑。';
-    } catch(error) {status.textContent=error.message||'AI 暂不可用，请稍后重试。';}
+    } catch(error) {status.textContent=error instanceof TypeError?'暂时无法连接生成服务，请稍后重试。':error.message||'AI 暂不可用，请稍后重试。';}
     finally {refine.disabled=false;}
   });
 })();
