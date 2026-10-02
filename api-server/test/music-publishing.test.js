@@ -1,0 +1,32 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const crypto=require('node:crypto');
+const express=require('express');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const createRouter=require('../music-publishing');
+const token='a'.repeat(43),hash=crypto.createHash('sha256').update(token).digest('hex');
+const audio=Buffer.concat([Buffer.from('ID3'),Buffer.alloc(125)]);
+test('only approved artists can upload, quota is atomic, admin has no quota',async()=>{
+  const previous={...process.env};const folder=fs.mkdtempSync(path.join(os.tmpdir(),'junaf-music-test-'));
+  process.env.JUNAF_MUSIC_UPLOAD_DIR=folder;process.env.JUNAF_ADMIN_EMAIL='admin@example.com';
+  let current={_id:'person',emailLower:'person@example.com',status:'active'};let artist=null;let count=0;const tracks=[];
+  const db={collection(name){if(name==='junaf_sessions')return{findOne:async q=>q._id===hash?{accountId:current._id}:null};
+    if(name==='customer_accounts')return{findOne:async()=>current};
+    if(name==='junaf_artists')return{findOne:async()=>artist};
+    if(name==='junaf_music_works')return{insertOne:async t=>{tracks.push(t);},findOne:async()=>null};
+    if(name==='junaf_artist_daily_uploads')return{updateOne:async(q,u)=>{if(u.$setOnInsert)return{matchedCount:1};if(q.count?.$lt!==undefined){if(count>=q.count.$lt)return{matchedCount:0};count++;return{matchedCount:1};}count+=u.$inc.count;return{matchedCount:1};}};
+    throw Error(name);}};
+  const app=express();app.use('/api/music',createRouter(db));const server=app.listen(0,'127.0.0.1');
+  try{await new Promise(r=>server.once('listening',r));const url=`http://127.0.0.1:${server.address().port}/api/music/works`;
+    const upload=()=>fetch(url,{method:'PUT',headers:{Cookie:`junaf_session=${token}`,'Content-Type':'audio/mpeg','X-Music-Title':'Demo','X-Music-Genre':'Ambient','Content-Length':String(audio.length)},body:audio});
+    assert.equal((await upload()).status,403);
+    artist={name:'Artist',level:'A1',status:'approved',dailyLimit:3};
+    for(let i=0;i<3;i++)assert.equal((await upload()).status,201);
+    assert.equal((await upload()).status,429);assert.equal(tracks.length,3);assert.equal(count,3);
+    current={_id:'admin',emailLower:'admin@example.com',status:'active'};artist=null;
+    assert.equal((await upload()).status,201);assert.equal(tracks.length,4);assert.equal(count,3);
+  }finally{await new Promise(r=>server.close(r));fs.rmSync(folder,{recursive:true,force:true});process.env=previous;}
+});
