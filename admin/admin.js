@@ -9,7 +9,7 @@
     review: ['03 / PAYMENT REVIEW', '订单核款', '核对到账信息后，才能发放正式音乐权益。'],
     orders: ['04 / ORDERS', '订单查询', '按状态、订单号或交易尾号查找音乐订单。'],
     accounts: ['05 / USERS', '用户', '查看 JUNAF 用户，不包含密码或会话信息。'],
-    video: ['07 / VIDEO', '视频', '视频是 JUNAF 的独立表达方向。'],
+    video: ['07 / VIDEO', '影像作品', '审核视频投稿，调整艺术家每日视频上传额度。'],
     thinking: ['08 / THINKING', '思考', '记录观点、研究与创作过程。'],
     tools: ['09 / TOOLS', '工具', '将自主开发的工具组织在统一入口。'],
     system: ['10 / SYSTEM', '运行状态', '检查后台连接和当前开放状态。']
@@ -86,7 +86,7 @@
     const directions = section('应用方向');
     const cards = node('div', '', 'admin-directions');
     direction(cards, '01 / MUSIC', '音乐', '查看方案与订单 →', 'music');
-    direction(cards, '02 / VIDEO', '视频', '管理模块筹备中', 'video');
+    direction(cards, '02 / VIDEO', '视频', '查看作品与额度 →', 'video');
     direction(cards, '03 / THINKING', '思考', '管理模块筹备中', 'thinking');
     direction(cards, '04 / TOOLS', '工具', '查看工具方向 →', 'tools');
     directions.append(cards);
@@ -122,6 +122,25 @@
     const studio=node('a','进入艺术家工作室上传作品 ↗','admin-link');studio.href='/music/studio/';works.append(studio);
     for(const item of workData.works||[]){const card=node('article','','admin-order');const info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.genre} · ${item.status}`));const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`${origin}${item.audioUrl}`;info.append(audio);const form=node('form');const status=formField(form,'发布状态','status','select');for(const [value,label]of [['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await musicApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('作品状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);works.append(card);}
     if(!workData.works?.length)works.append(node('p','尚无上传作品。','admin-empty'));
+  }
+  async function videoApi(path, method='GET', body) {
+    const response=await fetch(`${origin}/api/video/admin${path}`,{method,credentials:'include',cache:'no-store',
+      headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+    const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'视频管理暂不可用');return data;
+  }
+  async function renderVideo() {
+    const [artists,works]=await Promise.all([videoApi('/artists'),videoApi('/works')]);
+    const area=section('视频上传额度','沿用已批准的 JUNAF 艺术家身份；视频每日额度与音乐分开计算，默认 3 部。');
+    for(const item of artists.artists||[]){
+      const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.name),node('p',`${item.status} · ${item.level} · ${item.id}`));
+      const form=node('form'),limit=formField(form,'每日视频上传数量','limit','number');limit.min='0';limit.max='1000';limit.step='1';limit.value=String(item.dailyVideoLimit);const button=node('button','保存额度 →');button.type='submit';form.append(button);
+      form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await videoApi(`/artists/${encodeURIComponent(item.id)}`,'PATCH',{dailyVideoLimit:Number(limit.value)});message('视频额度已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});
+      card.append(info,form);area.append(card);
+    }
+    if(!artists.artists?.length)area.append(node('p','尚无艺术家。请在音乐管理中审批艺术家申请。','admin-empty'));
+    const videos=section('视频作品','审核通过后在 Video 页面公开。管理员可在视频工作室直接上传，不受每日数量限制。');const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
+    for(const item of works.works||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.category} · ${item.status}`));const video=document.createElement('video');video.controls=true;video.preload='metadata';video.style.maxWidth='320px';video.src=`${origin}${item.videoUrl}`;info.append(video);const form=node('form'),status=formField(form,'发布状态','status','select');for(const [value,label]of[['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await videoApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('视频状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);videos.append(card);}
+    if(!works.works?.length)videos.append(node('p','尚无视频投稿。','admin-empty'));
   }
   function formField(form, labelText, name, type = 'text') {
     const label = node('label', labelText);
@@ -241,8 +260,7 @@
     area.append(node('p', '系统开关由服务器配置管理；此页面只显示状态，不会直接修改安全设置。'));
   }
   function renderPlanned(view) {
-    const labels = {video: '视频内容与发布管理将作为独立模块接入。',
-      thinking: '思考内容、研究笔记与发布流程将作为独立模块接入。',
+    const labels = {thinking: '思考内容、研究笔记与发布流程将作为独立模块接入。',
       tools: '工具目录和用户使用管理将作为独立模块接入。'};
     const area = section(`${views[view][1]}方向`, labels[view]);
     if (view === 'tools') {
@@ -265,6 +283,7 @@
       $('#admin-login').hidden = true;
       if (view === 'overview') renderOverview(overview);
       else if (view === 'music') await renderMusic();
+      else if (view === 'video') await renderVideo();
       else if (view === 'review') await renderReview();
       else if (view === 'orders') await renderOrders();
       else if (view === 'accounts') await renderAccounts();

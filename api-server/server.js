@@ -14,6 +14,7 @@ const createChatRouter = require('./chat');
 const createYue2Routers = require('./yue2');
 const createRvcAccessRouter = require('./rvc-access');
 const createMusicPublishingRouter = require('./music-publishing');
+const createVideoPublishingRouter = require('./video-publishing');
 
 const uri = process.env.MONGO_URI;
 if (!uri) throw Error('MONGO_URI 必须配置');
@@ -55,6 +56,7 @@ app.use('/api/tools/yue2', yue2.user);
 app.use('/api/internal/yue2', yue2.worker);
 app.use('/api/tools/rvc-access', createRvcAccessRouter(db));
 app.use('/api/music', createMusicPublishingRouter(db));
+app.use('/api/video', createVideoPublishingRouter(db));
 
 // Reuse the production order, provisional grant, device and audit rules.
 // Only cookie-authenticated web endpoints are mounted. MusicAMC Token routes
@@ -178,7 +180,9 @@ async function start() {
     db.collection('junaf_rvc_sessions').createIndex({expiresAt:1},{expireAfterSeconds:0}),
     db.collection('junaf_music_works').createIndex({status:1,publishedAt:-1}),
     db.collection('junaf_music_works').createIndex({accountId:1,createdAt:-1}),
-    db.collection('junaf_artists').createIndex({status:1,updatedAt:-1})
+    db.collection('junaf_artists').createIndex({status:1,updatedAt:-1}),
+    db.collection('junaf_video_works').createIndex({status:1,publishedAt:-1}),
+    db.collection('junaf_video_works').createIndex({accountId:1,createdAt:-1})
   ]);
   const server = app.listen(port, '127.0.0.1', () => console.log(`JUNAF API listening on 127.0.0.1:${port}`));
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
