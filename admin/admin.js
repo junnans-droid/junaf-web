@@ -10,7 +10,7 @@
     orders: ['04 / ORDERS', '订单查询', '按状态、订单号或交易尾号查找音乐订单。'],
     accounts: ['05 / USERS', '用户', '查看 JUNAF 用户，不包含密码或会话信息。'],
     video: ['07 / VIDEO', '影像作品', '审核视频投稿，调整艺术家每日视频上传额度。'],
-    thinking: ['08 / THINKING', '思考', '记录观点、研究与创作过程。'],
+    thinking: ['08 / THINKING', '思考文章', '审核文章投稿，调整艺术家每日投稿额度。'],
     tools: ['09 / TOOLS', '工具', '将自主开发的工具组织在统一入口。'],
     system: ['10 / SYSTEM', '运行状态', '检查后台连接和当前开放状态。']
   };
@@ -87,7 +87,7 @@
     const cards = node('div', '', 'admin-directions');
     direction(cards, '01 / MUSIC', '音乐', '查看方案与订单 →', 'music');
     direction(cards, '02 / VIDEO', '视频', '查看作品与额度 →', 'video');
-    direction(cards, '03 / THINKING', '思考', '管理模块筹备中', 'thinking');
+    direction(cards, '03 / THINKING', '思考', '查看文章与额度 →', 'thinking');
     direction(cards, '04 / TOOLS', '工具', '查看工具方向 →', 'tools');
     directions.append(cards);
     const switches = section('开放状态');
@@ -141,6 +141,19 @@
     const videos=section('视频作品','审核通过后在 Video 页面公开。管理员可在视频工作室直接上传，不受每日数量限制。');const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
     for(const item of works.works||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.category} · ${item.status}`));const video=document.createElement('video');video.controls=true;video.preload='metadata';video.style.maxWidth='320px';video.src=`${origin}${item.videoUrl}`;info.append(video);const form=node('form'),status=formField(form,'发布状态','status','select');for(const [value,label]of[['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await videoApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('视频状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);videos.append(card);}
     if(!works.works?.length)videos.append(node('p','尚无视频投稿。','admin-empty'));
+  }
+  async function thinkingApi(path,method='GET',body){
+    const response=await fetch(`${origin}/api/thinking/admin${path}`,{method,credentials:'include',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+    const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'思考管理暂不可用');return data;
+  }
+  async function renderThinking(){
+    const [artists,posts]=await Promise.all([thinkingApi('/artists'),thinkingApi('/posts')]);
+    const area=section('思考投稿额度','艺术家身份与音乐、视频共用；思考每日投稿额度独立计算，默认 3 篇。');
+    for(const item of artists.artists||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.name),node('p',`${item.status} · ${item.level} · ${item.id}`));const form=node('form'),limit=formField(form,'每日思考投稿数量','limit','number');limit.min='0';limit.max='1000';limit.step='1';limit.value=String(item.dailyThinkingLimit);const button=node('button','保存额度 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await thinkingApi(`/artists/${encodeURIComponent(item.id)}`,'PATCH',{dailyThinkingLimit:Number(limit.value)});message('思考额度已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);area.append(card);}
+    if(!artists.artists?.length)area.append(node('p','尚无艺术家。请在音乐管理中审批申请。','admin-empty'));
+    const articles=section('文章审核','草稿仅作者可见；投稿审核通过后公开。管理员可在写作工作室直接创作。');const studio=node('a','进入写作工作室 ↗','admin-link');studio.href='/thinking/studio/';articles.append(studio);
+    for(const item of posts.posts||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.title),node('p',`${item.authorName} · ${item.category} · ${item.status}`),node('p',item.body));const form=node('form'),state=formField(form,'发布状态','status','select');for(const [value,label]of[['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;state.append(o);}state.value=item.status==='draft'?'pending':item.status;const button=node('button','保存文章状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await thinkingApi(`/posts/${encodeURIComponent(item.id)}`,'PATCH',{status:state.value});message('文章状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);articles.append(card);}
+    if(!posts.posts?.length)articles.append(node('p','尚无文章。','admin-empty'));
   }
   function formField(form, labelText, name, type = 'text') {
     const label = node('label', labelText);
@@ -260,8 +273,7 @@
     area.append(node('p', '系统开关由服务器配置管理；此页面只显示状态，不会直接修改安全设置。'));
   }
   function renderPlanned(view) {
-    const labels = {thinking: '思考内容、研究笔记与发布流程将作为独立模块接入。',
-      tools: '工具目录和用户使用管理将作为独立模块接入。'};
+    const labels = {tools: '工具目录和用户使用管理将作为独立模块接入。'};
     const area = section(`${views[view][1]}方向`, labels[view]);
     if (view === 'tools') {
       const link = node('a', '查看现有 JUNAF Tools ↗', 'admin-link');
@@ -284,6 +296,7 @@
       if (view === 'overview') renderOverview(overview);
       else if (view === 'music') await renderMusic();
       else if (view === 'video') await renderVideo();
+      else if (view === 'thinking') await renderThinking();
       else if (view === 'review') await renderReview();
       else if (view === 'orders') await renderOrders();
       else if (view === 'accounts') await renderAccounts();

@@ -16,7 +16,7 @@ module.exports = function createAdminRouter(db, requireAdmin) {
 
   router.get('/overview', async (_req, res) => {
     try {
-      const [accounts, stores, packs, products, orders, pendingOrders, settings, publishedVideos] = await Promise.all([
+      const [accounts, stores, packs, products, orders, pendingOrders, settings, publishedVideos, publishedThinking] = await Promise.all([
         db.collection('customer_accounts').countDocuments({status: 'active'}),
         db.collection('stores').countDocuments({status: 'active'}),
         db.collection('local_basic_music_packs').countDocuments({status: 'published'}),
@@ -24,13 +24,14 @@ module.exports = function createAdminRouter(db, requireAdmin) {
         db.collection('local_basic_purchase_orders').countDocuments({}),
         db.collection('local_basic_purchase_orders').countDocuments({status: {$in: ['submitted', 'provisional', 'approving']}}),
         db.collection('local_basic_purchase_settings').findOne({_id: 'manual'}),
-        db.collection('junaf_video_works').countDocuments({status:'published'})
+        db.collection('junaf_video_works').countDocuments({status:'published'}),
+        db.collection('junaf_thinking_posts').countDocuments({status:'published'})
       ]);
       res.json({ok: true, counts: {accounts, stores, publishedPacks: packs,
-        enabledProducts: products, orders, pendingOrders, publishedVideos},
+        enabledProducts: products, orders, pendingOrders, publishedVideos, publishedThinking},
       switches: {registration: process.env.JUNAF_REGISTRATION_ENABLED === 'true',
         sales: process.env.JUNAF_SALES_ENABLED === 'true' && settings?.enabled === true},
-      sections: {music: 'active', video: 'active', thinking: 'planned', tools: 'active'}});
+      sections: {music: 'active', video: 'active', thinking: 'active', tools: 'active'}});
     } catch (error) {fail(res, error);}
   });
 
