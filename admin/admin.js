@@ -8,7 +8,7 @@
     music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
     review: ['03 / PAYMENT REVIEW', '订单核款', '核对到账信息后，才能发放正式音乐权益。'],
     orders: ['04 / ORDERS', '订单查询', '按状态、订单号或交易尾号查找音乐订单。'],
-    accounts: ['05 / USERS', '用户', '查看 JUNAF 用户，不包含密码或会话信息。'],
+    accounts: ['05 / USERS', '用户', '查看 JUNAF 用户及艺术家资格，不包含密码或会话信息。'],
     video: ['07 / VIDEO', '影像作品', '审核视频投稿，调整艺术家每日视频上传额度。'],
     thinking: ['08 / THINKING', '思考文章', '审核文章投稿，调整艺术家每日投稿额度。'],
     tools: ['09 / TOOLS', '工具', '将自主开发的工具组织在统一入口。'],
@@ -261,9 +261,12 @@
   }
   async function renderAccounts() {
     const data = await api('/accounts');
-    const area = section('JUNAF 用户', '只显示必要的用户信息；密码与会话不会出现在后台列表。');
+    const area = section('JUNAF 用户', '艺术家身份以审核通过为准；级别与作品、视频、思考共用。密码与会话不会出现在后台列表。');
     table(area, [['邮箱', row => row.email], ['称呼', row => row.name || '—'],
-      ['状态', row => row.status], ['创建', row => date(row.createdAt)]],
+      ['账号状态', row => row.status],
+      ['是否艺术家', row => ({approved:'是',pending:'待审核',rejected:'否（未通过）'})[row.artistStatus] || '否'],
+      ['级别', row => row.isArtist ? row.artistLevel : '—'],
+      ['创建', row => date(row.createdAt)]],
     data.accounts || [], '当前没有用户。');
   }
   async function renderSystem() {
