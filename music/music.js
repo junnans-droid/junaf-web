@@ -1,87 +1,11 @@
-(() => {
-  'use strict';
-  const apiOrigin = ['localhost', '127.0.0.1'].includes(location.hostname)
-    ? 'http://127.0.0.1:3100' : 'https://api.junaf.com';
-  const packsNode = document.querySelector('#music-packs');
-  const statusNode = document.querySelector('#library-status');
-  const player = document.querySelector('#preview-player');
-  const titleNode = document.querySelector('#player-title');
-  let activeUrl = null;
-  let requestId = 0;
-
-  function el(tag, text, className) {
-    const node = document.createElement(tag);
-    if (text) node.textContent = text;
-    if (className) node.className = className;
-    return node;
-  }
-  function stop() {
-    requestId += 1;
-    player.pause();
-    player.removeAttribute('src');
-    player.load();
-    if (activeUrl) URL.revokeObjectURL(activeUrl);
-    activeUrl = null;
-    titleNode.textContent = '选择一个阶段开始试听';
-  }
-  async function play(pack, track) {
-    stop();
-    const current = requestId;
-    titleNode.textContent = `正在加载 · ${pack.name} / 阶段 ${track.stage}`;
-    try {
-      const response = await fetch(`${apiOrigin}${track.previewUrl}`, {signal: AbortSignal.timeout(25000)});
-      if (!response.ok) throw new Error('试听暂不可用');
-      const blob = await response.blob();
-      if (current !== requestId) return;
-      activeUrl = URL.createObjectURL(blob);
-      player.src = activeUrl;
-      titleNode.textContent = `${pack.name} / 阶段 ${track.stage} · ${track.title}`;
-      await player.play();
-    } catch (error) {
-      if (current === requestId) titleNode.textContent = error.message || '试听暂不可用';
-    }
-  }
-  function render(packs) {
-    packsNode.replaceChildren();
-    if (!packs.length) {
-      packsNode.append(el('p', '声音方案正在准备中。发布后将在这里出现。', 'music-empty'));
-      return;
-    }
-    packs.forEach((pack, index) => {
-      const card = el('article', '', 'music-pack');
-      card.append(el('span', String(index + 1).padStart(2, '0'), 'music-pack-number'));
-      const summary = el('div');
-      summary.append(el('span', `${pack.industry || 'JUNAF'} / VERSION ${pack.version}`, 'pack-meta'));
-      summary.append(el('h3', pack.name));
-      if (pack.notes) summary.append(el('p', pack.notes));
-      card.append(summary);
-      const stages = el('div', '', 'music-stages');
-      pack.tracks.forEach(track => {
-        const button = el('button', '', 'music-stage');
-        button.type = 'button';
-        button.setAttribute('aria-label', `试听${pack.name}，阶段${track.stage}，${track.title}`);
-        button.append(el('span', String(track.stage).padStart(2, '0')));
-        button.append(el('strong', track.title));
-        button.append(el('span', '试听 ↗'));
-        button.addEventListener('click', () => play(pack, track));
-        stages.append(button);
-      });
-      card.append(stages);
-      packsNode.append(card);
-    });
-  }
-  document.querySelector('#stop-preview').addEventListener('click', stop);
-  window.addEventListener('pagehide', stop);
-  fetch(`${apiOrigin}/api/music/catalog`, {signal: AbortSignal.timeout(10000)})
-    .then(async response => {
-      if (!response.ok) throw new Error('JUNAF 曲库暂未连接');
-      const data = await response.json();
-      if (!data.ok || !Array.isArray(data.packs)) throw new Error('曲库数据暂不可用');
-      render(data.packs);
-      statusNode.textContent = `${data.packs.length} 个已发布声音方案`;
-    })
-    .catch(error => {
-      statusNode.textContent = error.message || 'JUNAF 曲库暂未连接';
-      render([]);
-    });
+(() => {'use strict';
+const origin=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100':'https://api.junaf.com';
+const $=s=>document.querySelector(s), works=$('#music-works'), player=$('#preview-player');
+let all=[];
+const node=(tag,value='',className='')=>{const e=document.createElement(tag);e.textContent=value;e.className=className;return e;};
+function render(){const q=$('#music-search').value.trim().toLocaleLowerCase(), genre=$('#music-genre').value;const list=all.filter(x=>(!genre||x.genre===genre)&&(!q||[x.title,x.artistName,x.genre].some(y=>String(y||'').toLocaleLowerCase().includes(q))));works.replaceChildren();
+if(!list.length){works.append(node('p',all.length?'没有符合条件的作品。':'首批作品正在准备中。申请艺术家资格后即可投稿。','music-empty'));return;}
+list.forEach((track,i)=>{const card=node('article','','music-work');const number=node('span',String(i+1).padStart(2,'0'),'music-work-number');const info=node('div','','music-work-info');info.append(node('span',`${track.genre} / ${track.artistLevel||'A1'}`,'pack-meta'),node('h3',track.title),node('p',`${track.artistName}${track.description?' · '+track.description:''}`));const button=node('button','播放作品 ↗','music-play');button.type='button';button.addEventListener('click',()=>{player.src=origin+track.audioUrl;$('#player-title').textContent=`${track.title} / ${track.artistName}`;player.play().catch(()=>{$('#player-title').textContent='播放失败，请重试';});});card.append(number,info,button);works.append(card);});}
+$('#music-search').addEventListener('input',render);$('#music-genre').addEventListener('change',render);$('#stop-preview').addEventListener('click',()=>{player.pause();player.removeAttribute('src');player.load();$('#player-title').textContent='选择一首作品开始聆听';});
+fetch(`${origin}/api/music/works`,{signal:AbortSignal.timeout(12000)}).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error(d.message||'作品目录暂不可用');all=d.works||[];const genres=[...new Set(all.map(x=>x.genre).filter(Boolean))].sort();for(const genre of genres){const opt=node('option',genre);opt.value=genre;$('#music-genre').append(opt);}$('#library-status').textContent=`${all.length} 首已发布作品`;render();}).catch(e=>{$('#library-status').textContent=e.message;render();});
 })();

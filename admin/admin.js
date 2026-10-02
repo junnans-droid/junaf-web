@@ -5,7 +5,7 @@
   const $ = selector => document.querySelector(selector);
   const views = {
     overview: ['01 / OVERVIEW', '整体概览', '音乐、视频、思考与工具，共享 JUNAF 的设计语言。'],
-    music: ['02 / MUSIC', '音乐方案', '查看曲库与商品的真实状态。发布与媒体上传将在音乐模块完善后接入。'],
+    music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
     review: ['03 / PAYMENT REVIEW', '订单核款', '核对到账信息后，才能发放正式音乐权益。'],
     orders: ['04 / ORDERS', '订单查询', '按状态、订单号或交易尾号查找音乐订单。'],
     accounts: ['05 / USERS', '用户', '查看 JUNAF 用户，不包含密码或会话信息。'],
@@ -97,18 +97,31 @@
       node('span', `音乐购买：${data.switches?.sales ? '已开启' : '已关闭'}`, 'admin-state'));
     switches.append(state);
   }
+  async function musicApi(path, method = 'GET', body) {
+    const response = await fetch(`${origin}/api/music/admin${path}`, {method, credentials:'include',cache:'no-store',
+      headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+    const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'音乐管理暂不可用');return data;
+  }
   async function renderMusic() {
-    const [packs, products] = await Promise.all([api('/music/packs'), api('/music/products')]);
-    const packArea = section('音乐方案', '曲库管理暂为只读；音乐与视频文件上传按当前计划暂缓。');
-    table(packArea, [['方案名称', row => row.title], ['标识', row => row.id],
-      ['状态', row => row.status], ['阶段', row => String(row.stages)],
-      ['版本', row => row.version || '—'], ['更新', row => date(row.updatedAt)]],
-    packs.packs || [], '当前没有音乐方案。');
-    const productArea = section('音乐商品', '购买总开关关闭期间，商品不会向用户开放交易。');
-    table(productArea, [['商品', row => row.name || row.packId], ['对应方案', row => row.packId],
-      ['价格', row => money(row.priceFen)], ['期限', row => `${row.days} 天`],
-      ['设备', row => String(row.maxDevices)], ['状态', row => row.enabled ? '已上架' : '未上架']],
-    products.products || [], '当前没有音乐商品。');
+    const [artistData, workData] = await Promise.all([musicApi('/artists'), musicApi('/works')]);
+    const artists=section('JUNAF 艺术家', 'A1–A5 是艺术家身份层级。新获批艺术家默认每天可上传 3 首；可逐人调整。');
+    for(const item of artistData.artists||[]) {
+      const card=node('article','','admin-order');const info=node('div');
+      info.append(node('h3',item.name),node('p',`${item.id} · ${item.status} · ${item.level||'A1'}`),node('p',item.bio||''));
+      const form=node('form');const status=formField(form,'审核状态','status','select');
+      for(const [value,label] of [['pending','待审核'],['approved','已批准'],['rejected','未通过']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;
+      const level=formField(form,'艺术家等级','level','select');for(const value of ['A1','A2','A3','A4','A5']){const o=node('option',value);o.value=value;level.append(o);}level.value=item.level||'A1';
+      const quota=formField(form,'每日上传数量','dailyLimit','number');quota.min='0';quota.max='1000';quota.step='1';quota.value=String(item.dailyLimit??3);
+      const note=formField(form,'审核说明','reviewNote');note.value=item.reviewNote||'';
+      const button=node('button','保存艺术家设置 →');button.type='submit';form.append(button);
+      form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await musicApi(`/artists/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value,level:level.value,dailyLimit:Number(quota.value),reviewNote:note.value});message('艺术家设置已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});
+      card.append(info,form);artists.append(card);
+    }
+    if(!artistData.artists?.length)artists.append(node('p','尚无艺术家申请。','admin-empty'));
+    const works=section('音乐作品', '作品审核通过后会出现在 Music 目录。管理员可在艺术家工作室直接上传，不受每日数量限制。');
+    const studio=node('a','进入艺术家工作室上传作品 ↗','admin-link');studio.href='/music/studio/';works.append(studio);
+    for(const item of workData.works||[]){const card=node('article','','admin-order');const info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.genre} · ${item.status}`));const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`${origin}${item.audioUrl}`;info.append(audio);const form=node('form');const status=formField(form,'发布状态','status','select');for(const [value,label]of [['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await musicApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('作品状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);works.append(card);}
+    if(!workData.works?.length)works.append(node('p','尚无上传作品。','admin-empty'));
   }
   function formField(form, labelText, name, type = 'text') {
     const label = node('label', labelText);
