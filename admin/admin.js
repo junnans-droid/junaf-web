@@ -107,7 +107,7 @@
     const artists=section('JUNAF 艺术家', 'A1–A5 是艺术家身份层级。新获批艺术家默认每天可上传 3 首；可逐人调整。');
     for(const item of artistData.artists||[]) {
       const card=node('article','','admin-order');const info=node('div');
-      info.append(node('h3',item.name),node('p',`${item.id} · ${item.status} · ${item.level||'A1'}`),node('p',item.bio||''));
+      info.append(node('h3',item.name),node('p',`${item.id} · ${{pending:'待审核',approved:'已批准',rejected:'未通过'}[item.status]||item.status} · ${item.level||'A1'}`),node('p',item.bio||''));
       const form=node('form');const status=formField(form,'审核状态','status','select');
       for(const [value,label] of [['pending','待审核'],['approved','已批准'],['rejected','未通过']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;
       const level=formField(form,'艺术家等级','level','select');for(const value of ['A1','A2','A3','A4','A5']){const o=node('option',value);o.value=value;level.append(o);}level.value=item.level||'A1';
@@ -115,6 +115,11 @@
       const note=formField(form,'审核说明','reviewNote');note.value=item.reviewNote||'';
       const button=node('button','保存艺术家设置 →');button.type='submit';form.append(button);
       form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await musicApi(`/artists/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value,level:level.value,dailyLimit:Number(quota.value),reviewNote:note.value});message('艺术家设置已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});
+      if (item.status === 'pending') {
+        const approve=node('button','批准艺术家资格 →','admin-refresh');approve.type='button';
+        approve.addEventListener('click',async()=>{approve.disabled=true;try{await musicApi(`/artists/${encodeURIComponent(item.id)}`,'PATCH',{status:'approved'});await loadView();message(`${item.name} 的艺术家资格已批准并生效`);}catch(error){message(error.message);}finally{approve.disabled=false;}});
+        form.append(approve);
+      }
       card.append(info,form);artists.append(card);
     }
     if(!artistData.artists?.length)artists.append(node('p','尚无艺术家申请。','admin-empty'));
