@@ -1,0 +1,16 @@
+.writing-page{background:var(--paper);color:var(--ink)}
+.writing-hero{padding:9rem max(5vw,1.5rem) 3rem;border-bottom:1px solid var(--line)}
+.writing-hero h1{font-size:clamp(3.3rem,7vw,7rem);line-height:1.05;font-weight:400;letter-spacing:-.055em;margin:2rem 0}
+.writing-hero h1 em{font-style:normal}.writing-hero p{max-width:42rem;color:var(--muted);line-height:1.85}
+.writing-layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(320px,1.3fr);gap:3.5rem;padding:4rem max(5vw,1.5rem)}
+.writing-input,.writing-output{min-width:0}.writing-input .kicker,.writing-output .kicker{margin-bottom:2rem}
+.writing-input label,.writing-output label{display:block;margin:1.4rem 0 .55rem;font-size:.76rem;letter-spacing:.1em}
+.writing-input textarea,.writing-output textarea,.writing-input select{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:0;padding:1rem;background:transparent;color:var(--ink);font:inherit;line-height:1.7}
+.writing-input textarea:focus,.writing-output textarea:focus,.writing-input select:focus{outline:2px solid var(--red);outline-offset:2px}
+.writing-output textarea{min-height:31rem;resize:vertical}.writing-actions{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1.3rem}
+.writing-actions button{border:1px solid var(--ink);background:transparent;color:var(--ink);padding:.85rem 1rem;cursor:pointer;font:inherit;font-size:.82rem}
+.writing-actions button:first-child{background:var(--ink);color:var(--paper)}.writing-actions button:hover,.writing-actions button:focus-visible{background:var(--red);border-color:var(--red);color:#fff}
+.writing-actions button:disabled{opacity:.55;cursor:wait}.writing-hint{font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:1rem}
+#status{min-height:1.5rem;color:var(--red);font-size:.82rem}.writing-studio-link{display:inline-block;margin-top:1.4rem;color:var(--ink);text-underline-offset:.3em}
+.writing-foot{border-top:1px solid var(--line);display:flex;justify-content:space-between;padding:2rem max(5vw,1.5rem);font-size:.8rem}.writing-foot a{color:var(--ink)}
+@media(max-width:760px){.writing-hero{padding-top:7rem}.writing-layout{grid-template-columns:1fr;gap:2rem;padding-top:2.5rem}.writing-output textarea{min-height:24rem}.writing-foot{gap:1rem;flex-wrap:wrap}}
