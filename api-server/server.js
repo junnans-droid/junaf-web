@@ -41,8 +41,8 @@ app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && origin && !allowed.has(origin))
     return res.status(403).json({ok: false, message: '请求来源未获准'});
-  res.set('Access-Control-Allow-Headers', 'Content-Type, X-Device-Id');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, X-Device-Id, X-Music-Title, X-Music-Genre, X-Music-Description, X-Video-Title, X-Video-Category, X-Video-Description');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(origin && !allowed.has(origin) ? 403 : 204).end();
   next();
 });
