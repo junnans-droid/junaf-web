@@ -16,6 +16,11 @@
 .tool-tile strong{font-size:clamp(1.5rem,2.7vw,2.4rem);font-weight:400;letter-spacing:-.04em;margin:auto 0 .25rem}
 .tool-tile small{font-size:.67rem;letter-spacing:.12em;color:var(--red)}
 .tool-tile-desc{font-size:.74rem;color:var(--muted);margin-top:1.35rem}
+.tool-tile-compute{align-self:flex-start;margin-top:.7rem;padding:.28rem .5rem;border:1px solid currentColor;font-size:.64rem;line-height:1.25;letter-spacing:.04em;white-space:nowrap}
+.tool-tile-compute--local{color:#526b58}
+.tool-tile-compute--cpu{color:#53687c}
+.tool-tile-compute--gpu{color:#a4412e}
+.tool-tile:hover .tool-tile-compute,.tool-tile:focus-visible .tool-tile-compute{color:var(--paper)}
 .tool-tile:hover .tool-tile-desc,.tool-tile:hover .tool-tile-top,.tool-tile:focus-visible .tool-tile-desc,.tool-tile:focus-visible .tool-tile-top{color:#bbb}
 @media(max-width:850px){.tool-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.tools-page .tools-hero{min-height:0;padding-top:6.5rem;padding-bottom:2rem}.tools-page .tools-hero h1{font-size:clamp(3.25rem,12vw,5rem)}.tools-page .tools-directory{padding-top:2rem}.tools-page .directory-title{grid-template-columns:1fr;gap:1rem}.tool-jump{margin-top:2rem}.tool-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tool-tile{min-height:180px;padding:1rem}.tool-tile strong{font-size:1.5rem}.tool-tile-desc{line-height:1.5;margin-top:1rem}}
