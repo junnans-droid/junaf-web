@@ -18,6 +18,13 @@
   }
   const safeName = name => (name || 'junaf-audio-midi').replace(/\.[^.]+$/, '').replace(/[^\w\u4e00-\u9fff-]+/g, '-').slice(0, 50);
   const seconds = value => `${Number(value || 0).toFixed(1)}s`;
+  const clockTime = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
+  function showPlayback(position, duration, label) {
+    $('am-playback-label').textContent = label;
+    $('am-playback-progress').max = Math.max(duration, .01);
+    $('am-playback-progress').value = Math.min(position, duration);
+    $('am-playback-time').textContent = `${clockTime(position)} / ${clockTime(duration)}`;
+  }
   async function refresh() {
     try {
       const data = await api('/tools/audio-midi/jobs');
@@ -85,6 +92,7 @@
       $('am-tempo').value = project.tempo;
       $('am-source').src = `${BASE}/tools/audio-midi/jobs/${id}/audio`;
       $('am-editor').hidden = false; $('am-note-panel').hidden = true;
+      showPlayback(0, 0, 'MIDI 试听');
       renderTracks(); editStatus('识别结果是可编辑的草稿，请用原音频核对。');
       $('am-editor').scrollIntoView({behavior: 'smooth'});
     } catch (error) { status(error.message); }
@@ -217,9 +225,19 @@
     playingTrackId = trackId;
     $('am-play').textContent = trackId === null ? '停止播放' : '播放全部 MIDI';
     renderTracks();
-    editStatus(trackId === null ? '正在播放未静音的 MIDI 音轨。' : `正在单独试听「${tracks[0].name}」的 MIDI 音符。`);
-    const timer = setTimeout(() => { stopPlayback?.(); }, (lastEnd + 1) * 1000);
-    stopPlayback = () => { clearTimeout(timer); for (const oscillator of oscillators) { try { oscillator.stop(); } catch {} } master.disconnect(); stopPlayback = null; playingTrackId = null; $('am-play').textContent = '播放 MIDI'; renderTracks(); };
+    const label = trackId === null ? '全部音轨' : tracks[0].name;
+    showPlayback(0, lastEnd, label);
+    editStatus(trackId === null ? '正在播放未静音的 MIDI 音轨。' : `正在单独试听「${label}」的 MIDI 音符。`);
+    const progressTimer = setInterval(() => showPlayback(Math.max(0, audioContext.currentTime - base), lastEnd, label), 100);
+    const timer = setTimeout(() => { stopPlayback?.(true); }, (lastEnd + 1) * 1000);
+    stopPlayback = (completed = false) => {
+      const position = completed ? lastEnd : Math.min(lastEnd, Math.max(0, audioContext.currentTime - base));
+      clearTimeout(timer); clearInterval(progressTimer);
+      for (const oscillator of oscillators) { try { oscillator.stop(); } catch {} }
+      master.disconnect(); stopPlayback = null; playingTrackId = null;
+      showPlayback(position, lastEnd, label); $('am-play').textContent = '播放 MIDI'; renderTracks();
+      editStatus(completed ? '试听完成。' : '已停止试听。');
+    };
   }
   $('am-play').addEventListener('click', () => { if (stopPlayback && playingTrackId === null) stopPlayback(); else playTracks(); });
   window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
