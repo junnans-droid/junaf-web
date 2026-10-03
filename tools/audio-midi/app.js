@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   let project = null, currentJob = null, selected = null, dirty = false, busy = false, jobs = [];
   const muted = new Set();
-  let audioContext = null, stopPlayback = null;
+  let audioContext = null, stopPlayback = null, playingTrackId = null;
   const programs = [[0, '钢琴'], [4, '电钢琴'], [24, '吉他'], [32, '贝斯'], [48, '弦乐'], [80, '合成器']];
   const el = (tag, text) => { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; return element; };
   const status = message => { $('am-status').textContent = message; };
@@ -49,7 +49,7 @@
           if (!confirm(`删除「${job.name}」和保存的 MIDI 草稿？`)) return;
           try {
             await api(`/tools/audio-midi/jobs/${job.id}`, {method: 'DELETE'});
-            if (currentJob?.id === job.id) { currentJob = null; project = null; dirty = false; $('am-editor').hidden = true; }
+            if (currentJob?.id === job.id) { stopPlayback?.(); currentJob = null; project = null; dirty = false; $('am-editor').hidden = true; }
             await refresh();
           } catch (error) { status(error.message); }
         });
@@ -79,6 +79,7 @@
     try {
       const data = await api(`/tools/audio-midi/jobs/${id}`);
       if (!data.job.project) throw Error('识别结果尚未准备好');
+      stopPlayback?.();
       currentJob = data.job; project = structuredClone(data.job.project); selected = null; dirty = false; muted.clear();
       $('am-title').textContent = data.job.name.replace(/\.[^.]+$/, '');
       $('am-tempo').value = project.tempo;
@@ -111,10 +112,14 @@
       program.value = track.program; program.addEventListener('change', () => { track.program = Number(program.value); markDirty(); });
       const mute = el('button', muted.has(track.id) ? '取消静音' : '静音'); mute.type = 'button';
       mute.addEventListener('click', () => { muted.has(track.id) ? muted.delete(track.id) : muted.add(track.id); renderTracks(); });
+      const audition = el('button', playingTrackId === track.id ? '停止试听' : '试听此轨'); audition.type = 'button';
+      audition.disabled = track.notes.length === 0;
+      audition.setAttribute('aria-label', `${playingTrackId === track.id ? '停止试听' : '单独试听'}${track.name}的 MIDI 音符`);
+      audition.addEventListener('click', () => { if (playingTrackId === track.id) stopPlayback?.(); else playTracks(track.id); });
       const count = el('small', `${track.notes.length} 个音符`);
       const remove = el('button', '删除轨道'); remove.type = 'button'; remove.disabled = project.tracks.length <= 1;
-      remove.addEventListener('click', () => { if (project.tracks.length > 1 && confirm(`删除「${track.name}」整条音轨？`)) { project.tracks = project.tracks.filter(item => item !== track); selected = null; $('am-note-panel').hidden = true; markDirty(); renderTracks(); } });
-      controls.append(name, program, mute, count, remove); card.append(controls);
+      remove.addEventListener('click', () => { if (project.tracks.length > 1 && confirm(`删除「${track.name}」整条音轨？`)) { if (playingTrackId === track.id) stopPlayback?.(); project.tracks = project.tracks.filter(item => item !== track); selected = null; $('am-note-panel').hidden = true; markDirty(); renderTracks(); } });
+      controls.append(name, program, audition, mute, count, remove); card.append(controls);
       const wrap = el('div'); wrap.className = 'am-roll-wrap';
       const roll = el('div'); roll.className = 'am-roll';
       const [minPitch, maxPitch] = rangeFor(track);
@@ -182,21 +187,26 @@
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     editStatus('MIDI 已下载。可导入支持标准 MIDI 的音乐软件继续编辑。');
   });
-  $('am-play').addEventListener('click', async () => {
-    if (stopPlayback) { stopPlayback(); return; }
+  async function playTracks(trackId = null) {
     if (!project) return;
-    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-    await audioContext.resume();
+    stopPlayback?.();
+    const tracks = trackId === null ? project.tracks.filter(track => !muted.has(track.id)) : project.tracks.filter(track => track.id === trackId);
+    if (!tracks.some(track => track.notes.length)) { editStatus('这条音轨还没有音符，可以双击时间线添加。'); return; }
+    try {
+      audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      await audioContext.resume();
+    } catch { editStatus('浏览器无法启动声音，请检查音频播放权限。'); return; }
     const master = audioContext.createGain(); master.gain.value = .12; master.connect(audioContext.destination);
     const base = audioContext.currentTime + .1;
     const oscillators = [];
-    for (const track of project.tracks) {
-      if (muted.has(track.id)) continue;
+    let lastEnd = 0;
+    for (const track of tracks) {
       for (const note of track.notes.slice(0, 2000)) {
         const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
         oscillator.type = track.isDrum ? 'square' : track.program >= 80 ? 'sawtooth' : 'sine';
         oscillator.frequency.value = 440 * 2 ** ((note.pitch - 69) / 12);
         const start = base + note.start, end = start + (track.isDrum ? Math.min(.12, note.duration) : note.duration);
+        lastEnd = Math.max(lastEnd, note.start + note.duration);
         gain.gain.setValueAtTime(0, start);
         gain.gain.linearRampToValueAtTime(Math.min(.5, note.velocity / 254), start + .01);
         gain.gain.setValueAtTime(Math.min(.5, note.velocity / 254), Math.max(start + .01, end - .04));
@@ -204,10 +214,14 @@
         oscillator.connect(gain).connect(master); oscillator.start(start); oscillator.stop(end + .02); oscillators.push(oscillator);
       }
     }
-    $('am-play').textContent = '停止播放';
-    const timer = setTimeout(() => { stopPlayback?.(); }, (currentJob.duration + 2) * 1000);
-    stopPlayback = () => { clearTimeout(timer); for (const oscillator of oscillators) { try { oscillator.stop(); } catch {} } master.disconnect(); stopPlayback = null; $('am-play').textContent = '播放 MIDI'; };
-  });
+    playingTrackId = trackId;
+    $('am-play').textContent = trackId === null ? '停止播放' : '播放全部 MIDI';
+    renderTracks();
+    editStatus(trackId === null ? '正在播放未静音的 MIDI 音轨。' : `正在单独试听「${tracks[0].name}」的 MIDI 音符。`);
+    const timer = setTimeout(() => { stopPlayback?.(); }, (lastEnd + 1) * 1000);
+    stopPlayback = () => { clearTimeout(timer); for (const oscillator of oscillators) { try { oscillator.stop(); } catch {} } master.disconnect(); stopPlayback = null; playingTrackId = null; $('am-play').textContent = '播放 MIDI'; renderTracks(); };
+  }
+  $('am-play').addEventListener('click', () => { if (stopPlayback && playingTrackId === null) stopPlayback(); else playTracks(); });
   window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
   refresh(); setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 7000);
 })();
