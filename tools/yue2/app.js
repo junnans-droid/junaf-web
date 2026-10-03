@@ -15,6 +15,18 @@ async function api(path,options={}){
   finally{clearTimeout(timeout)}
 }
 function status(message){$('status').textContent=message}
+function selectedMode(){return document.querySelector('input[name="mode"]:checked')?.value||'song'}
+function updateMode(){
+  const instrumental=selectedMode()==='instrumental';
+  $('lyrics-field').hidden=instrumental;
+  $('abc-field').hidden=!instrumental;
+  $('lyrics').required=!instrumental;
+  $('lyrics').disabled=instrumental;
+  $('style').placeholder=instrumental
+    ? '例如：纯音乐，温暖钢琴与弦乐，缓慢起伏，无人声，适合夜间阅读'
+    : '例如：中文独立流行，温暖女声，钢琴、贝斯与轻鼓，88 BPM，克制而明亮';
+  if(notice){notice='';status('准备就绪')}
+}
 function updateButton(){const button=$('submit');button.disabled=busy||!canSubmit||!workerOnline;button.textContent=busy?'正在提交…':'生成音乐 ↗'}
 function render(){
   const list=$('job-list');list.replaceChildren();
@@ -23,7 +35,7 @@ function render(){
     const article=document.createElement('article');article.className='yue2-job';
     const head=document.createElement('div');head.className='yue2-job-head';
     const title=document.createElement('strong');title.textContent=job.style.length>46?job.style.slice(0,46)+'…':job.style;
-    const badge=document.createElement('span');badge.textContent={queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status;
+    const badge=document.createElement('span');badge.textContent=(job.mode==='instrumental'?(job.scoreImported?'曲谱纯音乐 · ':'纯音乐 · '):'歌曲 · ')+({queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status);
     head.append(title,badge);const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN');article.append(head,time);
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
     if(job.status==='queued'&&!workerOnline){const p=document.createElement('p');p.textContent='生成服务器未开机，开机后会继续处理。';article.append(p)}
@@ -54,11 +66,18 @@ async function refresh(){
 $('generate-form').onsubmit=async event=>{
   event.preventDefault();if(busy||!canSubmit||!workerOnline)return;
   notice='';
-  const style=$('style').value.trim(),lyrics=$('lyrics').value.trim();
-  if(style.length<8||lyrics.length<8){notice='声音方向和原创歌词都需要至少 8 个字。';status(notice);return}
+  const mode=selectedMode(),style=$('style').value.trim(),lyrics=mode==='song'?$('lyrics').value.trim():'';
+  if(style.length<8||(mode==='song'&&lyrics.length<8)){notice=mode==='song'?'声音方向和原创歌词都需要至少 8 个字。':'声音方向至少填写 8 个字。';status(notice);return}
+  let abc='';
+  const file=mode==='instrumental' ? $('abc-file').files[0] : null;
+  if(file){
+    if(!/\.(abc|txt)$/i.test(file.name)||file.size>32768){notice='请选择 32 KB 以下的 .abc 或 .txt 曲谱。';status(notice);return}
+    try{abc=(await file.text()).replace(/^\uFEFF/,'').trim()}catch{notice='无法读取曲谱文件，请重新选择。';status(notice);return}
+    if(!/^X:\s*\d+/m.test(abc)||!/^K:\s*\S+/m.test(abc)){notice='ABC 曲谱需要包含 X: 编号和 K: 调号。';status(notice);return}
+  }
   busy=true;updateButton();status('正在提交…');
   try{
-    await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({style,lyrics})});
+    await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,style,lyrics,abc})});
     status('任务已提交，正在等待生成');
   }catch(error){notice=error.message;status(notice)}
   finally{busy=false;updateButton();await refresh()}
@@ -68,5 +87,7 @@ $('generate-form').addEventListener('invalid',event=>{
   status(notice);
 },true);
 for(const field of [$('style'),$('lyrics')])field.addEventListener('input',()=>{if(notice){notice='';status('准备就绪')}});
+document.querySelectorAll('input[name="mode"]').forEach(field=>field.addEventListener('change',updateMode));
+updateMode();
 refresh();setInterval(()=>{if(document.visibilityState==='visible')refresh()},5000);
 })();

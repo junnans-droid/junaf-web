@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#eae7de">
-  <meta name="description" content="JUNAF 音乐生成实验：写下原创歌词和声音方向，获得可以聆听的作品与旋律计划。">
+  <meta name="description" content="JUNAF 音乐生成实验：选择歌曲或纯音乐，描述声音方向，获得可以聆听的作品。">
   <title>音乐生成实验 — JUNAF Tools</title>
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/yue2/style.css?v=20261002-2">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/yue2/style.css?v=20261004-2">
 </head>
 <body class="yue2-page"><a class="skip" href="#main">跳至正文</a>
   <header id="header"><a class="brand" href="/">JUNAF<span>.</span></a>
@@ -14,15 +14,16 @@
   </header>
   <main id="main"><section class="yue2-hero"><div class="kicker"><span>JUNAF / TOOLS 06</span><span>WRITE / COMPOSE / LISTEN</span></div>
     <h1>从一句想法，<br><em>开始一首歌<span class="accent">。</span></em></h1>
-    <p>描述声音，写下原创歌词。YuE2 会先构思旋律与和弦，再生成可以播放的音乐。</p>
+    <p>选择歌曲或纯音乐，描述想听见的声音。YuE2 会先构思旋律与和弦，再生成可以播放的音乐。</p>
   </section>
   <section id="login" class="yue2-login" hidden><h2>登录后开始创作</h2><p>你的生成任务与作品保存在 JUNAF 账号中。</p><a href="/account/?next=%2Ftools%2Fyue2%2F">前往登录 ↗</a></section>
   <section id="workspace" class="yue2-workspace" hidden>
     <div class="yue2-form-wrap"><div class="kicker"><span>01 / 输入</span><span>THE IDEA</span></div>
-      <form id="generate-form"><label for="style">声音方向 <small>至少 8 个字</small></label>
+      <form id="generate-form"><fieldset class="yue2-mode"><legend>创作类型</legend><label><input type="radio" name="mode" value="song" checked> 歌曲 · 填写原创歌词</label><label><input type="radio" name="mode" value="instrumental"> 纯音乐 · 无需歌词</label></fieldset><label for="style">声音方向 <small>至少 8 个字</small></label>
         <textarea id="style" minlength="8" maxlength="500" rows="4" required placeholder="例如：中文独立流行，温暖女声，钢琴、贝斯与轻鼓，88 BPM，克制而明亮"></textarea>
-        <label for="lyrics">原创歌词 <small>至少 8 个字</small></label>
-        <textarea id="lyrics" minlength="8" maxlength="3000" rows="10" required placeholder="[Verse]&#10;写下你的第一句……&#10;&#10;[Chorus]&#10;写下想反复唱的句子……"></textarea>
+        <div id="lyrics-field"><label for="lyrics">原创歌词 <small>至少 8 个字</small></label>
+        <textarea id="lyrics" minlength="8" maxlength="3000" rows="10" required placeholder="[Verse]&#10;写下你的第一句……&#10;&#10;[Chorus]&#10;写下想反复唱的句子……"></textarea></div>
+        <div id="abc-field" hidden><label for="abc-file">导入 ABC 曲谱 <small>可选 · .abc / .txt · 32 KB 以下</small></label><input id="abc-file" type="file" accept=".abc,.txt,text/plain"><p class="yue2-abc-help">支持简单单旋律 ABC 或 YuE2 双声部 ABC；导入后以曲谱旋律生成无歌词的器乐作品。文件须包含 X: 和 K: 行。</p></div>
         <div class="yue2-form-foot"><p>请使用你有权使用的歌词。生成一次通常需要几十秒；任务按顺序执行。</p><button id="submit" type="submit" disabled>生成音乐 ↗</button></div>
       </form><p id="status" role="status">准备就绪</p>
     </div>
@@ -31,5 +32,5 @@
     </div>
   </section>
   <section class="yue2-foot"><a href="/tools/">← 返回 Tools</a><span>JUNAF / ART · DESIGN · CONSTRUCTION</span></section>
-  </main><script src="/site.js" defer></script><script src="/tools/yue2/app.js?v=20261002-2" defer></script>
+  </main><script src="/site.js" defer></script><script src="/tools/yue2/app.js?v=20261004-2" defer></script>
 </body></html>
