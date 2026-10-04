@@ -73,14 +73,26 @@
     card.append(node('small', code), node('strong', title), node('span', state));
     parent.append(card);
   }
-  function renderOverview(data) {
+  async function toolDirectoryCounts() {
+    const response = await fetch('/tools/', {cache:'no-store',signal:AbortSignal.timeout(5000)});
+    if (!response.ok) throw Error('工具目录暂不可用');
+    const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+    const tools = page.querySelectorAll('.tool-tile-grid .tool-tile[href]');
+    if (!tools.length) throw Error('工具目录暂不可用');
+    return {total:tools.length,gpu:page.querySelectorAll('.tool-tile-grid .tool-tile .tool-tile-compute--gpu').length};
+  }
+  async function renderOverview(data) {
     const counts = data.counts || {};
-    const area = section('运营总览', '当前数字直接来自 JUNAF 独立数据库。');
+    const area = section('运营总览', '用户与作品数字来自 JUNAF 数据库；工具数量与公开的 Tools 目录同步。');
     const grid = node('div', '', 'admin-metrics');
     for (const [key, label] of [['accounts', '有效用户'],
       ['publishedPacks', '已发布音乐作品'], ['publishedVideos', '已发布视频作品'], ['enabledProducts', '可购买作品'],
+      ['publishedThinking', '已发布思考文章'], ['pendingThinking', '待审核文章'],
       ['orders', '音乐订单'], ['pendingOrders', '待处理核款']])
       metric(grid, String(counts[key] ?? 0), label);
+    const tools = await toolDirectoryCounts().catch(() => null);
+    metric(grid, tools ? String(tools.total) : '—', '已收录工具');
+    metric(grid, tools ? String(tools.gpu) : '—', 'GPU 算力工具');
     area.append(grid);
     const directions = section('应用方向');
     const cards = node('div', '', 'admin-directions');
@@ -434,7 +446,7 @@
     try {
       const overview = await api('/overview');
       $('#admin-login').hidden = true;
-      if (view === 'overview') renderOverview(overview);
+      if (view === 'overview') await renderOverview(overview);
       else if (view === 'purchases') await renderPurchases();
       else if (view === 'music') await renderMusic();
       else if (view === 'video') await renderVideo();
