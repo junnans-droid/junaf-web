@@ -34,7 +34,7 @@
     $('#editor-heading').textContent = '编辑思考';
     $('#save-post').textContent = '保存修改 ↗';
     $('#studio-editor').scrollIntoView({behavior: 'smooth'});
-    status(post.status === 'published' ? '修改已发布文章后将重新进入审核。' : '正在编辑文章，可以反复保存。');
+    status(post.status === 'published' ? '修改已发布文章后，系统会按当前等级更新审核状态。' : '正在编辑文章，可以反复保存。');
   }
 
   function downloadTxt(post) {
@@ -59,7 +59,7 @@
       const card = document.createElement('article');
       card.className = 'thinking-draft';
       const state = document.createElement('small');
-      state.textContent = {draft:'草稿', pending:'待审核', published:'已发布', rejected:'未通过'}[post.status] || post.status;
+      state.textContent = post.status === 'published' ? (post.reviewStatus === 'post_pending' ? '绿色通道已通过 · 待后置审核' : '审核通过 · 已发布') : ({draft:'草稿', pending:'待审核', rejected:'未通过'}[post.status] || post.status);
       const title = document.createElement('h3');
       title.textContent = post.title;
       const excerpt = document.createElement('p');
@@ -76,13 +76,13 @@
       actions.append(download);
       if (['draft', 'rejected'].includes(post.status)) {
         const submit = document.createElement('button');
-        submit.type = 'button'; submit.textContent = '提交审核 ↗';
+        submit.type = 'button'; submit.textContent = '投稿发布 ↗';
         submit.addEventListener('click', async () => {
           submit.disabled = true;
           try {
-            await api('/posts/' + post.id + '/submit', 'POST');
+            const result = await api('/posts/' + post.id + '/submit', 'POST');
             await load();
-            status('文章已提交审核');
+            status(result.message);
           } catch (error) { status(error.message); }
           finally { submit.disabled = false; }
         });

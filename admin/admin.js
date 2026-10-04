@@ -267,8 +267,15 @@
     const area=section('思考投稿额度','艺术家身份与音乐、视频共用；思考每日投稿额度独立计算，默认 3 篇。');
     for(const item of artists.artists||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.name),node('p',`${item.status} · ${item.level} · ${item.id}`));const form=node('form'),limit=formField(form,'每日思考投稿数量','limit','number');limit.min='0';limit.max='1000';limit.step='1';limit.value=String(item.dailyThinkingLimit);const button=node('button','保存额度 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await thinkingApi(`/artists/${encodeURIComponent(item.id)}`,'PATCH',{dailyThinkingLimit:Number(limit.value)});message('思考额度已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);area.append(card);}
     if(!artists.artists?.length)area.append(node('p','尚无艺术家。请在音乐管理中审批申请。','admin-empty'));
-    const articles=section('文章审核','草稿仅作者可见；投稿审核通过后公开。管理员可在写作工作室直接创作。');const studio=node('a','进入写作工作室 ↗','admin-link');studio.href='/thinking/studio/';articles.append(studio);
-    for(const item of posts.posts||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.title),node('p',`${item.authorName} · ${item.category} · ${item.status}`),node('p',item.body));const form=node('form'),state=formField(form,'发布状态','status','select');for(const [value,label]of[['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;state.append(o);}state.value=item.status==='draft'?'pending':item.status;const button=node('button','保存文章状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await thinkingApi(`/posts/${encodeURIComponent(item.id)}`,'PATCH',{status:state.value});message('文章状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);articles.append(card);}
+    const articles=section('文章审核','草稿只对作者可见。A1、A2 投稿先审核；A3–A5 和管理员投稿直接发布，随后在此完成后置审核。');
+    const studio=node('a','进入写作工作室 ↗','admin-link');studio.href='/thinking/studio/';articles.append(studio);
+    for(const item of posts.posts||[]){
+      const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',item.title),node('p',`${item.authorName} · ${item.creatorRole==='admin'?'JUNAF 官方':item.artistLevel||'艺术家'} · ${item.category} · ${item.status==='draft'?'草稿':workReviewLabel(item)}`),node('p',item.body));
+      if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
+      const form=node('form');reviewForm(form,item,(id,body)=>thinkingApi(`/posts/${encodeURIComponent(id)}`,'PATCH',body));
+      card.append(info,form);articles.append(card);
+    }
     if(!posts.posts?.length)articles.append(node('p','尚无文章。','admin-empty'));
   }
   function formField(form, labelText, name, type = 'text') {
