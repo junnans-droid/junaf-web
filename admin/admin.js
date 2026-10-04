@@ -14,7 +14,7 @@
     system: ['10 / SYSTEM', '系统与注册', '检查后台连接，并管理新用户注册。']
   };
   const statusText = {awaiting_payment: '待付款', submitted: '待核款', provisional: '临时权益中',
-    approving: '核款处理中', approved: '已核款', rejected: '已拒绝', needs_info: '需补充信息'};
+    approving: '核款处理中', approved: '已核款', rejected: '已拒绝', cancelled:'已停售关闭', needs_info: '需补充信息'};
   const message = text => {$('#admin-message').textContent = text;};
   const node = (tag, text = '', className = '') => {
     const item = document.createElement(tag);
@@ -157,7 +157,8 @@
     if(!data.orders.length)area.append(node('p','暂无作品订单。','admin-empty'));
   }
   async function renderMusic() {
-    const [artistData, workData] = await Promise.all([musicApi('/artists'), musicApi('/works')]);
+    const [artistData, workData, delistData, eventData] = await Promise.all([
+      musicApi('/artists'), musicApi('/works'), musicApi('/delist-requests'), musicApi('/work-events')]);
     const artists=section('JUNAF 艺术家', 'A1–A5 是艺术家身份层级。新获批艺术家默认每天可上传 3 首；可逐人调整。');
     for(const item of artistData.artists||[]) {
       const card=node('article','','admin-order');const info=node('div');
@@ -181,6 +182,25 @@
     const studio=node('a','进入艺术家工作室上传作品 ↗','admin-link');studio.href='/music/studio/';works.append(studio);
     for(const item of workData.works||[]){const card=node('article','','admin-order');const info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.genre} · ${item.status}`));const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`${origin}${item.audioUrl}`;info.append(audio);const form=node('form');const status=formField(form,'发布状态','status','select');for(const [value,label]of [['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await musicApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('作品状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);works.append(card);}
     if(!workData.works?.length)works.append(node('p','尚无上传作品。','admin-empty'));
+    const delists=section('作品停售申请','批准后关闭购买并取消尚未付款的订单。已核款或待核款的作品仍不能由作者删除。');
+    for(const request of delistData.requests||[]){
+      const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',request.title),node('p',`作品 ${request.workId} · 作者账号 ${request.accountId}`),
+        node('p',`申请时间：${date(request.requestedAt)}`),node('p',request.reason||'作者未填写说明'));
+      const form=node('form'),action=formField(form,'处理结果','action','select');
+      for(const [value,label]of[['approve','同意停售'],['reject','拒绝申请']]){const option=node('option',label);option.value=value;action.append(option);}
+      const note=formField(form,'审核说明','note','textarea');const button=node('button','保存审核结果 →');button.type='submit';form.append(button);
+      form.addEventListener('submit',async event=>{event.preventDefault();if(action.value==='reject'&&!note.value.trim()){message('拒绝申请时请填写原因');return;}
+        button.disabled=true;try{await musicApi(`/delist-requests/${encodeURIComponent(request.workId)}/review`,'POST',
+          {action:action.value,note:note.value.trim()});await loadView();message(action.value==='approve'?'停售已批准并生效':'申请已拒绝');}
+        catch(error){message(error.message);}finally{button.disabled=false;}});
+      card.append(info,form);delists.append(card);
+    }
+    if(!delistData.requests?.length)delists.append(node('p','当前没有待审核的停售申请。','admin-empty'));
+    const history=section('作品操作记录','仅保留作品编号、操作者、动作、涉及字段与时间；不保存已删除作品的音频或正文。最近显示 200 条。');
+    table(history,[['时间',row=>date(row.completedAt||row.createdAt)],['动作',row=>({upload:'上传',edit:'修改',delete:'删除'})[row.action]||row.action],
+      ['作品编号',row=>row.workId],['操作者账号 ID',row=>row.actorAccountId],['状态',row=>row.state==='completed'?'完成':'处理中'],
+      ['修改字段',row=>(row.changedFields||[]).join('、')||'—']],eventData.events||[],'暂无操作记录。');
   }
   async function videoApi(path, method='GET', body) {
     const response=await fetch(`${origin}/api/video/admin${path}`,{method,credentials:'include',cache:'no-store',

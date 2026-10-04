@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s),base=`${origin}/api/music/purchases`;
 const note=text=>{$('#purchase-message').textContent=text;};
 const node=(tag,text='')=>{const element=document.createElement(tag);element.textContent=text;return element;};
 const money=value=>`¥${(value/100).toFixed(2)}`;
-const statuses={awaiting_payment:'待付款',submitted:'等待人工核款',approved:'已核款，可下载',rejected:'未通过'};
+const statuses={awaiting_payment:'待付款',submitted:'等待人工核款',approved:'已核款，可下载',rejected:'未通过',cancelled:'已停售，订单关闭'};
 let catalog=null,selected=null;
 async function api(path,method='GET',body){const r=await fetch(base+path,{method,credentials:'include',cache:'no-store',
   headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});
