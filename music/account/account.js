@@ -136,31 +136,11 @@
     $('#signed-in').hidden = false;
     $('#account-name').textContent = data.account.displayName || data.account.email;
     $('#admin-entry').hidden = data.isAdmin !== true;
-    const list = $('#store-list');
-    list.replaceChildren();
-    for (const [index, store] of data.stores.entries()) {
-      const card = document.createElement('article');
-      card.className = 'store-card';
-      const number = document.createElement('span');
-      number.textContent = String(index + 1).padStart(2, '0');
-      const name = document.createElement('strong');
-      name.textContent = store.name;
-      const role = document.createElement('span');
-      role.textContent = store.role === 'owner' ? '音乐权益所有者' : '音乐权益成员';
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = '查看音乐 →';
-      button.addEventListener('click', () => showStore(store));
-      card.append(number, name, role, button);
-      list.append(card);
-    }
-    if (!data.stores.length) list.textContent = '音乐服务尚未开通';
-    if (data.stores.length === 1) showStore(data.stores[0]);
-    else message('已登录 JUNAF');
+    message('已登录 JUNAF');
+    window.dispatchEvent(new Event('junaf:account-ready'));
   }
   async function showSignedOut() {
     $('#signed-in').hidden = true;
-    $('#store-detail').hidden = true;
     $('#signed-out').hidden = false;
     try {
       const config = await request('/config');
@@ -234,26 +214,6 @@
   $('#logout').addEventListener('click', async () => {
     try { await request('/logout', 'POST'); await showSignedOut(); message('已退出登录'); }
     catch (error) { message(error.message); }
-  });
-  $('#payment-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    if (!selectedStore || !selectedOrder) return;
-    const formElement = event.currentTarget;
-    const button = event.submitter;
-    button.disabled = true;
-    try {
-      const form = new FormData(formElement);
-      const paymentRef = String(form.get('paymentRef') || '').trim();
-      if (!/^[0-9]{6}$/.test(paymentRef)) throw Error('请输入交易单号后6位数字');
-      const result = await shop(`/orders/${encodeURIComponent(selectedOrder.id)}/payment`,
-        selectedStore.id, 'POST', {paymentRef, paidAt: form.get('paidAt'), confirmPayment: true});
-      $('#checkout').hidden = true;
-      formElement.reset();
-      await showStore(selectedStore);
-      message(result.trialExpiresAt ? '付款信息已提交，临时权益已生效；等待人工核款' :
-        result.collisionFlag ? '交易尾号重复，临时权益暂缓；等待人工核对' : '付款信息已提交，等待人工核款');
-    } catch (error) { message(error.message); }
-    finally { button.disabled = false; }
   });
   request('/me').then(renderAccount).catch(async () => {
     await showSignedOut();

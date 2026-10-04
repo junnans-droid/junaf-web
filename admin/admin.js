@@ -6,8 +6,7 @@
   const views = {
     overview: ['01 / OVERVIEW', '整体概览', '音乐、视频、思考与工具，共享 JUNAF 的设计语言。'],
     music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
-    review: ['03 / PAYMENT REVIEW', '订单核款', '核对到账信息后，才能发放正式音乐权益。'],
-    orders: ['04 / ORDERS', '订单查询', '按状态、订单号或交易尾号查找音乐订单。'],
+    purchases: ['03 / MUSIC SALES', '作品购买与订单', '设置单曲价格、收款信息，并核对 JUNAF 作品订单。'],
     accounts: ['05 / USERS', '用户', '查看 JUNAF 用户及艺术家资格，不包含密码或会话信息。'],
     video: ['07 / VIDEO', '影像作品', '审核视频投稿，调整艺术家每日视频上传额度。'],
     thinking: ['08 / THINKING', '思考文章', '审核文章投稿，调整艺术家每日投稿额度。'],
@@ -79,13 +78,13 @@
     const area = section('运营总览', '当前数字直接来自 JUNAF 独立数据库。');
     const grid = node('div', '', 'admin-metrics');
     for (const [key, label] of [['accounts', '有效用户'],
-      ['publishedPacks', '已发布音乐方案'], ['enabledProducts', '已上架商品'],
+      ['publishedPacks', '已发布音乐作品'], ['enabledProducts', '可购买作品'],
       ['orders', '音乐订单'], ['pendingOrders', '待处理核款']])
       metric(grid, String(counts[key] ?? 0), label);
     area.append(grid);
     const directions = section('应用方向');
     const cards = node('div', '', 'admin-directions');
-    direction(cards, '01 / MUSIC', '音乐', '查看方案与订单 →', 'music');
+    direction(cards, '01 / MUSIC', '音乐', '查看作品与艺术家 →', 'music');
     direction(cards, '02 / VIDEO', '视频', '查看作品与额度 →', 'video');
     direction(cards, '03 / THINKING', '思考', '查看文章与额度 →', 'thinking');
     direction(cards, '04 / TOOLS', '工具', '查看工具方向 →', 'tools');
@@ -97,11 +96,65 @@
       node('span', `音乐购买：${data.switches?.sales ? '已开启' : '已关闭'}`, 'admin-state'));
     switches.append(state);
     const manage=node('a','管理注册开关 ↗','admin-link');manage.href='#system';switches.append(manage);
+    const sales=node('a','管理作品购买 ↗','admin-link');sales.href='#purchases';switches.append(sales);
   }
   async function musicApi(path, method = 'GET', body) {
     const response = await fetch(`${origin}/api/music/admin${path}`, {method, credentials:'include',cache:'no-store',
       headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
     const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'音乐管理暂不可用');return data;
+  }
+  async function purchaseApi(path,method='GET',body){
+    const response=await fetch(`${origin}/api/music/purchases${path}`,{method,credentials:'include',cache:'no-store',
+      headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});
+    const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'作品订单暂不可用');return data;
+  }
+  async function renderPurchases(){
+    const data=await purchaseApi('/admin');
+    const config=section('作品购买设置','配置收款码和收款方后再开放购买；关闭时现有订单仍可核款。');
+    const form=node('form','','admin-order');const fields=node('div'),actions=node('div');
+    const payee=formField(fields,'收款方名称','payee');payee.value=data.settings.payee;
+    const qr=formField(fields,'收款二维码 HTTPS 图片地址','qrUrl','url');qr.value=data.settings.qrUrl;
+    const instructions=formField(fields,'付款说明','instructions','textarea');instructions.value=data.settings.instructions;
+    const enabled=formField(actions,'开放作品购买','enabled','select');
+    for(const [value,label] of [['false','关闭'],['true','开放']]){const option=node('option',label);option.value=value;enabled.append(option);}
+    enabled.value=String(data.settings.enabled);
+    const save=node('button','保存收款设置 →');save.type='submit';actions.append(save);form.append(fields,actions);config.append(form);
+    form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{
+      await purchaseApi('/admin/settings','PUT',{payee:payee.value.trim(),qrUrl:qr.value.trim(),
+        instructions:instructions.value.trim(),enabled:enabled.value==='true'});
+      await loadView();message('收款设置已保存');
+    }catch(e){message(e.message);}finally{save.disabled=false;}});
+    const prices=section('单曲价格','只有已发布且启用购买的作品才会显示购买按钮；作品原本的在线播放保持开放。');
+    for(const work of data.works){const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',work.title),node('p',`${work.artistName} · ${work.id}`));
+      const editor=node('form'),amount=formField(editor,'售价（元）','price','number');amount.min='.01';amount.max='1000000';amount.step='.01';amount.value=work.priceFen?(work.priceFen/100).toFixed(2):'';
+      const live=formField(editor,'上架状态','enabled','select');for(const [value,label]of[['false','不出售'],['true','开放购买']]){const option=node('option',label);option.value=value;live.append(option);}live.value=String(work.enabled);
+      const button=node('button','保存售价 →');button.type='submit';editor.append(button);card.append(info,editor);prices.append(card);
+      editor.addEventListener('submit',async event=>{event.preventDefault();button.disabled=true;try{
+        const priceFen=Math.round(Number(amount.value)*100);if(!Number.isSafeInteger(priceFen)||priceFen<1)throw Error('请填写有效售价');
+        await purchaseApi(`/admin/works/${encodeURIComponent(work.id)}`,'PUT',{priceFen,enabled:live.value==='true'});
+        message(`${work.title} 的售价已保存`);
+      }catch(e){message(e.message);}finally{button.disabled=false;}});
+    }
+    if(!data.works.length)prices.append(node('p','暂无已发布的音乐作品。','admin-empty'));
+    const area=section('JUNAF 作品订单','确认实际到账及金额后再核款；核款后用户可从用户中心下载原始音频。');
+    for(const order of data.orders){const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',order.title),node('p',`${order.accountEmail} · ${money(order.priceFen)} · ${statusText[order.status]||order.status}`),
+        node('p',`${order.id} · 交易信息：${order.paymentRef||'未提交'} · 付款时间：${date(order.paidAt)}`));
+      card.append(info);
+      if(order.status==='submitted'){const editor=node('form'),action=formField(editor,'核款结果','action','select');
+        for(const [value,label]of[['approve','确认到账'],['reject','拒绝']]){const option=node('option',label);option.value=value;action.append(option);}
+        const amount=formField(editor,'实际到账金额（元）','amount','number');amount.min='.01';amount.step='.01';
+        const note=formField(editor,'审核说明','note','textarea');const button=node('button','保存核款结果 →');button.type='submit';editor.append(button);card.append(editor);
+        editor.addEventListener('submit',async event=>{event.preventDefault();const confirmedFen=Math.round(Number(amount.value)*100);
+          if(action.value==='approve'&&confirmedFen!==order.priceFen){message('实际到账金额必须与订单金额相同');return;}
+          if(action.value==='approve'&&!window.confirm('请确认已在收款记录中核实到账。确认后用户可下载原始音频。'))return;
+          button.disabled=true;try{await purchaseApi(`/admin/orders/${encodeURIComponent(order.id)}/review`,'POST',
+            {action:action.value,confirmedFen,note:note.value.trim()});await loadView();message('核款结果已保存');}
+          catch(e){message(e.message);}finally{button.disabled=false;}});
+      }area.append(card);
+    }
+    if(!data.orders.length)area.append(node('p','暂无作品订单。','admin-empty'));
   }
   async function renderMusic() {
     const [artistData, workData] = await Promise.all([musicApi('/artists'), musicApi('/works')]);
@@ -318,6 +371,7 @@
       const overview = await api('/overview');
       $('#admin-login').hidden = true;
       if (view === 'overview') renderOverview(overview);
+      else if (view === 'purchases') await renderPurchases();
       else if (view === 'music') await renderMusic();
       else if (view === 'video') await renderVideo();
       else if (view === 'thinking') await renderThinking();

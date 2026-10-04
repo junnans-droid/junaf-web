@@ -6,6 +6,7 @@
 .registration-message{font-size:.85rem;line-height:1.6;color:var(--red);min-height:1.4em;margin:0}
 .account-reset-link{color:var(--ink);font-size:.85rem;text-decoration:underline;text-underline-offset:.25em;justify-self:start}
 .account-page #header:not(.scrolled){color:var(--paper)}
+#music-purchases{margin-top:4rem}#music-purchases>p{color:var(--muted);line-height:1.7}#purchase-message{color:var(--red)!important;min-height:1.5rem}#purchase-checkout{background:#d9d6cc;padding:2rem;margin-top:2rem}#purchase-qr{display:block;width:min(100%,260px);margin:1.5rem 0}#purchase-orders .product-card a{color:var(--ink);text-underline-offset:.25em}
 .account-page #header:not(.scrolled) .header-note{color:#c5c4bc}
 .account-page #header:not(.scrolled) #menu{color:var(--paper)}
 @media(max-width:800px){.account-page #header:not(.scrolled) #nav.open{color:var(--ink)}}
