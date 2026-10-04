@@ -12,7 +12,7 @@
     video: ['07 / VIDEO', '影像作品', '审核视频投稿，调整艺术家每日视频上传额度。'],
     thinking: ['08 / THINKING', '思考文章', '审核文章投稿，调整艺术家每日投稿额度。'],
     tools: ['09 / TOOLS', '工具', '将自主开发的工具组织在统一入口。'],
-    system: ['10 / SYSTEM', '运行状态', '检查后台连接和当前开放状态。']
+    system: ['10 / SYSTEM', '系统与注册', '检查后台连接，并管理新用户注册。']
   };
   const statusText = {awaiting_payment: '待付款', submitted: '待核款', provisional: '临时权益中',
     approving: '核款处理中', approved: '已核款', rejected: '已拒绝', needs_info: '需补充信息'};
@@ -96,6 +96,7 @@
       document.createTextNode('  '),
       node('span', `音乐购买：${data.switches?.sales ? '已开启' : '已关闭'}`, 'admin-state'));
     switches.append(state);
+    const manage=node('a','管理注册开关 ↗','admin-link');manage.href='#system';switches.append(manage);
   }
   async function musicApi(path, method = 'GET', body) {
     const response = await fetch(`${origin}/api/music/admin${path}`, {method, credentials:'include',cache:'no-store',
@@ -278,7 +279,22 @@
       [data.salesEnabled ? '开启' : '关闭', '音乐购买'],
       [data.mediaConfigured ? '已配置' : '未配置', '本地媒体']]) metric(grid, value, label);
     area.append(grid);
-    area.append(node('p', '系统开关由服务器配置管理；此页面只显示状态，不会直接修改安全设置。'));
+    const control=node('div','','admin-setting');
+    const details=node('div');
+    details.append(node('h3','新用户注册'),node('p','关闭后停止发送注册验证码并拒绝新账号提交；现有账号仍可登录。'));
+    const toggle=node('button',data.registrationEnabled?'已开放 · 点击关闭':'已关闭 · 点击开放','admin-switch');
+    toggle.type='button';toggle.setAttribute('role','switch');
+    toggle.setAttribute('aria-label','开放新用户注册');
+    toggle.setAttribute('aria-checked',String(data.registrationEnabled));
+    toggle.addEventListener('click',async()=>{
+      toggle.disabled=true;
+      try{
+        const result=await api('/settings/registration','PATCH',{enabled:!data.registrationEnabled});
+        await loadView();
+        message(result.registrationEnabled?'新用户注册已开放':'新用户注册已关闭');
+      }catch(error){message(error.message);toggle.disabled=false;}
+    });
+    control.append(details,toggle);area.append(control);
   }
   function renderPlanned(view) {
     const labels = {tools: '工具目录和用户使用管理将作为独立模块接入。'};
