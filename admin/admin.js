@@ -78,7 +78,7 @@
     const area = section('运营总览', '当前数字直接来自 JUNAF 独立数据库。');
     const grid = node('div', '', 'admin-metrics');
     for (const [key, label] of [['accounts', '有效用户'],
-      ['publishedPacks', '已发布音乐作品'], ['enabledProducts', '可购买作品'],
+      ['publishedPacks', '已发布音乐作品'], ['publishedVideos', '已发布视频作品'], ['enabledProducts', '可购买作品'],
       ['orders', '音乐订单'], ['pendingOrders', '待处理核款']])
       metric(grid, String(counts[key] ?? 0), label);
     area.append(grid);
@@ -156,6 +156,29 @@
     }
     if(!data.orders.length)area.append(node('p','暂无作品订单。','admin-empty'));
   }
+  let reviewAudio=null;
+  const reviewTime=value=>Number.isFinite(value)?`${Math.floor(value/60)}:${String(Math.floor(value%60)).padStart(2,'0')}`:'0:00';
+  function reviewPlayer(item){
+    const wrap=node('div','','admin-audio');
+    const audio=document.createElement('audio');audio.preload='none';audio.src=`${origin}${item.audioUrl}`;
+    const play=node('button','▶');play.type='button';play.setAttribute('aria-label',`播放 ${item.title}`);
+    const elapsed=node('span','0:00'),duration=node('span','0:00');
+    const seek=document.createElement('input');seek.type='range';seek.min='0';seek.max='1000';seek.value='0';seek.disabled=true;seek.setAttribute('aria-label',`${item.title} 播放进度`);
+    const update=()=>{const length=audio.duration;play.textContent=audio.paused?'▶':'Ⅱ';elapsed.textContent=reviewTime(audio.currentTime||0);duration.textContent=reviewTime(length);seek.disabled=!Number.isFinite(length)||length<=0;seek.value=seek.disabled?'0':String(Math.round((audio.currentTime||0)/length*1000));};
+    play.addEventListener('click',()=>{if(audio.paused){if(reviewAudio&&reviewAudio!==audio)reviewAudio.pause();reviewAudio=audio;audio.play().catch(()=>message('试听失败，请重试'));}else audio.pause();});
+    seek.addEventListener('input',()=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(seek.value)/1000*audio.duration;});
+    for(const event of ['loadedmetadata','durationchange','timeupdate','play','pause','ended'])audio.addEventListener(event,update);
+    wrap.append(audio,play,elapsed,seek,duration);return wrap;
+  }
+  const workReviewLabel=item=>item.status==='published'?(item.reviewStatus==='post_pending'?'绿色通道已发布 · 待后置审核':'审核通过 · 已发布'):item.status==='pending'?'待发布审核':'审核未通过';
+  function reviewForm(form,item,apiCall){
+    const status=formField(form,'审核决定','status','select');
+    for(const [value,label]of[['published','审核通过并发布'],['rejected','驳回并停止展示'],['pending','转为待审核']]){const option=node('option',label);option.value=value;status.append(option);}status.value=item.status;
+    const note=formField(form,'驳回原因','reviewNote','textarea');note.value=item.reviewNote||'';
+    const button=node('button',item.reviewStatus==='post_pending'?'完成后置审核 →':'保存审核结果 →');button.type='submit';form.append(button);
+    form.addEventListener('submit',async event=>{event.preventDefault();if(status.value==='rejected'&&!note.value.trim()){message('驳回时请填写原因');return;}
+      button.disabled=true;try{await apiCall(item.id,{status:status.value,reviewNote:note.value.trim()});message(status.value==='rejected'?'作品已驳回并停止公开展示':'审核结果已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});
+  }
   async function renderMusic() {
     const [artistData, workData, delistData, eventData] = await Promise.all([
       musicApi('/artists'), musicApi('/works'), musicApi('/delist-requests'), musicApi('/work-events')]);
@@ -178,9 +201,15 @@
       card.append(info,form);artists.append(card);
     }
     if(!artistData.artists?.length)artists.append(node('p','尚无艺术家申请。','admin-empty'));
-    const works=section('音乐作品', '作品审核通过后会出现在 Music 目录。管理员可在艺术家工作室直接上传，不受每日数量限制。');
+    const works=section('音乐作品', 'A1、A2 上传后先审核；A3–A5 与管理员通过绿色通道直接发布，随后在此完成后置审核。');
     const studio=node('a','进入艺术家工作室上传作品 ↗','admin-link');studio.href='/music/studio/';works.append(studio);
-    for(const item of workData.works||[]){const card=node('article','','admin-order');const info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.genre} · ${item.status}`));const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`${origin}${item.audioUrl}`;info.append(audio);const form=node('form');const status=formField(form,'发布状态','status','select');for(const [value,label]of [['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await musicApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('作品状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);works.append(card);}
+    for(const item of workData.works||[]){
+      const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.artistLevel||'A1'} · ${item.genre} · ${workReviewLabel(item)}`),reviewPlayer(item));
+      if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
+      const form=node('form');reviewForm(form,item,(id,body)=>musicApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
+      card.append(info,form);works.append(card);
+    }
     if(!workData.works?.length)works.append(node('p','尚无上传作品。','admin-empty'));
     const delists=section('作品停售申请','批准后关闭购买并取消尚未付款的订单。已核款或待核款的作品仍不能由作者删除。');
     for(const request of delistData.requests||[]){
@@ -217,8 +246,16 @@
       card.append(info,form);area.append(card);
     }
     if(!artists.artists?.length)area.append(node('p','尚无艺术家。请在音乐管理中审批艺术家申请。','admin-empty'));
-    const videos=section('视频作品','审核通过后在 Video 页面公开。管理员可在视频工作室直接上传，不受每日数量限制。');const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
-    for(const item of works.works||[]){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.category} · ${item.status}`));const video=document.createElement('video');video.controls=true;video.preload='metadata';video.style.maxWidth='320px';video.src=`${origin}${item.videoUrl}`;info.append(video);const form=node('form'),status=formField(form,'发布状态','status','select');for(const [value,label]of[['pending','待审核'],['published','发布'],['rejected','退回']]){const o=node('option',label);o.value=value;status.append(o);}status.value=item.status;const button=node('button','保存作品状态 →');button.type='submit';form.append(button);form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;try{await videoApi(`/works/${encodeURIComponent(item.id)}`,'PATCH',{status:status.value});message('视频状态已保存');await loadView();}catch(error){message(error.message);}finally{button.disabled=false;}});card.append(info,form);videos.append(card);}
+    const videos=section('视频作品','A1、A2 上传后先审核；A3–A5 与管理员直接发布，随后在此完成后置审核。');
+    const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
+    for(const item of works.works||[]){
+      const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.artistLevel||'A1'} · ${item.category} · ${workReviewLabel(item)}`));
+      const video=document.createElement('video');video.controls=true;video.preload='metadata';video.style.maxWidth='320px';video.src=`${origin}${item.videoUrl}`;info.append(video);
+      if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
+      const form=node('form');reviewForm(form,item,(id,body)=>videoApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
+      card.append(info,form);videos.append(card);
+    }
     if(!works.works?.length)videos.append(node('p','尚无视频投稿。','admin-empty'));
   }
   async function thinkingApi(path,method='GET',body){
