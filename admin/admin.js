@@ -4,7 +4,7 @@
     ? 'http://127.0.0.1:3100' : 'https://api.junaf.com';
   const $ = selector => document.querySelector(selector);
   const views = {
-    overview: ['01 / OVERVIEW', '整体概览', '音乐、视频、思考与工具，共享 JUNAF 的设计语言。'],
+    overview: ['01 / OVERVIEW', '整体概览', '以设计语言为核心：确定构建方向，形成方法，借助 Tools 呈现音乐、视觉与思考作品。'],
     music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
     purchases: ['03 / MUSIC SALES', '作品购买与订单', '设置单曲价格、收款信息，并核对 JUNAF 作品订单。'],
     accounts: ['05 / USERS', '用户', '查看 JUNAF 用户及艺术家资格，不包含密码或会话信息。'],
