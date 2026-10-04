@@ -78,7 +78,7 @@
     }
     for (const item of rows) {
       const card = node('article', '', 'video-card');
-      card.append(player(item), node('small', `${item.category} / ${item.artistLevel || 'A1'}`),
+      card.append(player(item), node('small', `${item.category} / ${item.creatorRole === 'admin' ? 'JUNAF 官方' : item.artistLevel || '艺术家'}`),
         node('h3', item.title), node('p', `${item.artistName}${item.description ? ' · ' + item.description : ''}`));
       list.append(card);
     }

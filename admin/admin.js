@@ -205,7 +205,7 @@
     const studio=node('a','进入艺术家工作室上传作品 ↗','admin-link');studio.href='/music/studio/';works.append(studio);
     for(const item of workData.works||[]){
       const card=node('article','','admin-order'),info=node('div');
-      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.artistLevel||'A1'} · ${item.genre} · ${workReviewLabel(item)}`),reviewPlayer(item));
+      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.creatorRole==='admin'?'JUNAF 官方':item.artistLevel||'艺术家'} · ${item.genre} · ${workReviewLabel(item)}`),reviewPlayer(item));
       if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
       const form=node('form');reviewForm(form,item,(id,body)=>musicApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
       card.append(info,form);works.append(card);
@@ -250,7 +250,7 @@
     const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
     for(const item of works.works||[]){
       const card=node('article','','admin-order'),info=node('div');
-      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.artistLevel||'A1'} · ${item.category} · ${workReviewLabel(item)}`));
+      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.creatorRole==='admin'?'JUNAF 官方':item.artistLevel||'艺术家'} · ${item.category} · ${workReviewLabel(item)}`));
       const video=document.createElement('video');video.controls=true;video.preload='metadata';video.style.maxWidth='320px';video.src=`${origin}${item.videoUrl}`;info.append(video);
       if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
       const form=node('form');reviewForm(form,item,(id,body)=>videoApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
