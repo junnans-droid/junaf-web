@@ -1,0 +1,24 @@
+(()=>{'use strict';
+const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
+const $=id=>document.getElementById(id);
+let busy=false,refreshing=false,enabled=false,workerOnline=false,jobs=[],previewUrl=null,notice='';
+async function api(path,options={}){
+  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),30000);
+  try{const response=await fetch(BASE+path,{credentials:'include',cache:'no-store',signal:controller.signal,...options});const data=await response.json().catch(()=>({}));
+    if(!response.ok){const error=Error(data.message||`请求失败 (${response.status})`);error.status=response.status;throw error}return data;
+  }catch(error){if(error.name==='AbortError')throw Error('连接超时，请稍后重试');throw error}finally{clearTimeout(timeout)}
+}
+function status(message){$('status').textContent=message}
+function button(){const blocked=jobs.some(job=>['queued','running'].includes(job.status));$('submit').disabled=busy||!enabled||!workerOnline||blocked;$('submit').textContent=busy?'正在提交…':'生成视频 ↗'}
+function render(){const list=$('job-list');list.replaceChildren();if(!jobs.length){const p=document.createElement('p');p.textContent='还没有视频。选择一张图，开始第一次实验。';list.append(p);return}
+  for(const job of jobs){const article=document.createElement('article');article.className='comfy-job';const head=document.createElement('div');head.className='comfy-job-head';const title=document.createElement('strong');title.textContent=job.prompt.length>45?job.prompt.slice(0,45)+'…':job.prompt;const badge=document.createElement('span');badge.textContent={queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status;head.append(title,badge);article.append(head);const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN');article.append(time);
+    if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
+    if(job.status==='queued'&&!workerOnline){const p=document.createElement('p');p.textContent='GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p)}
+    if(job.videoAvailable){const url=BASE+'/tools/comfy/jobs/'+job.id+'/video';const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='none';video.crossOrigin='use-credentials';video.src=url;article.append(video);const link=document.createElement('a');link.className='comfy-download';link.href=url;link.download='junaf-'+job.id+'.mp4';link.textContent='下载 MP4 ↗';article.append(link)}list.append(article)}
+}
+async function refresh(){if(refreshing)return;refreshing=true;try{const data=await api('/tools/comfy/jobs');$('workspace').hidden=false;$('login').hidden=true;$('restricted').hidden=true;enabled=!!data.enabled;workerOnline=!!data.workerOnline;jobs=Array.isArray(data.jobs)?data.jobs:[];render();if(!busy)status(notice||(!enabled?'视觉实验正在接入 GPU，暂不能提交':!workerOnline?'GPU 当前未连接，开机后此页面会自动恢复。':jobs.some(job=>['queued','running'].includes(job.status))?'视频正在生成，页面会自动更新。':'准备就绪'))}
+  catch(error){if(error.status===401){$('workspace').hidden=true;$('login').hidden=false;$('restricted').hidden=true}else if(error.status===403){$('workspace').hidden=true;$('login').hidden=true;$('restricted').hidden=false}else status(error.message)}finally{refreshing=false;button()}}
+$('image').addEventListener('change',()=>{if(previewUrl)URL.revokeObjectURL(previewUrl);const file=$('image').files[0],box=$('image-preview');box.replaceChildren();if(file){previewUrl=URL.createObjectURL(file);const img=document.createElement('img');img.src=previewUrl;img.alt='待生成的参考图像';box.append(img)}else box.textContent='选择一张图，作为视频的起始画面'});
+$('generate-form').onsubmit=async event=>{event.preventDefault();if(busy||!enabled||!workerOnline)return;const file=$('image').files[0],prompt=$('prompt').value.trim();if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024){notice='请选择 10 MB 以下的 PNG、JPG 或 WebP 图片';status(notice);return}if(prompt.length<8){notice='动态描述至少填写 8 个字符';status(notice);return}busy=true;notice='';button();status('正在提交…');try{await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':file.type,'X-Comfy-Prompt':encodeURIComponent(prompt)},body:file});notice='任务已提交，正在等待生成';status(notice)}catch(error){notice=error.message;status(notice)}finally{busy=false;await refresh()}};
+refresh();setInterval(()=>{if(document.visibilityState==='visible')refresh()},5000);
+})();

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#eae7de"><meta name="description" content="JUNAF 视觉实验：让静止画面开始流动。">
+<title>视觉实验 — JUNAF Tools</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/comfy/style.css?v=20261010-1"></head>
+<body class="comfy-page"><a class="skip" href="#main">跳至正文</a>
+<header id="header"><a class="brand" href="/">JUNAF<span>.</span></a><nav id="nav" aria-label="主导航"><a href="/">首页</a><a href="/music/">Music</a><a href="/tools/" aria-current="page">Tools</a><a href="/account/">用户中心</a></nav><span class="header-note">JUNAF / VISUAL EXPERIMENT</span><button id="menu" aria-controls="nav" aria-expanded="false">菜单</button></header>
+<main id="main"><section class="comfy-hero"><div class="kicker"><span>JUNAF / TOOLS 11</span><span>IMAGE → MOTION</span></div><h1>让画面，<br><em>继续发生<span class="accent">。</span></em></h1><p>从一张图像出发，描述它如何运动。视觉实验将图像延展为短视频，作为 JUNAF 视觉构建的第一步。</p></section>
+<section id="login" class="comfy-message" hidden><h2>登录后开始实验</h2><p>当前仅对管理员账号开放。</p><a href="/account/?next=%2Ftools%2Fcomfy%2F">前往登录 ↗</a></section>
+<section id="restricted" class="comfy-message" hidden><h2>视觉实验仍在内部测试</h2><p>此阶段仅管理员可以提交和查看生成任务。</p><a href="/tools/">返回工具目录 ↗</a></section>
+<section id="workspace" class="comfy-workspace" hidden><div class="comfy-form"><div class="kicker"><span>01 / 输入</span><span>THE STARTING FRAME</span></div><form id="generate-form"><label for="image">参考图像 <small>PNG / JPG / WebP · 10 MB 以下</small></label><input id="image" type="file" accept="image/png,image/jpeg,image/webp" required><div id="image-preview" class="comfy-preview"><span>选择一张图，作为视频的起始画面</span></div><label for="prompt">动态描述 <small>8–500 个字符</small></label><textarea id="prompt" rows="5" minlength="8" maxlength="500" required placeholder="例如：镜头固定，深蓝色烟雾从黑洞边缘缓慢向下、向外流动，背景纯黑，没有人物。"></textarea><div class="comfy-form-foot"><p>首版为单一图生视频实验。每次只处理一个任务；生成时间取决于 GPU 和模型。</p><button id="submit" type="submit" disabled>生成视频 ↗</button></div></form><p id="status" role="status">正在检查服务状态…</p></div><div class="comfy-results"><div class="kicker"><span>02 / 结果</span><span>YOUR SESSIONS</span></div><div id="job-list"></div></div></section>
+<section class="comfy-foot"><a href="/tools/">← 返回 Tools</a><span>JUNAF / ART · DESIGN · CONSTRUCTION</span></section></main>
+<script src="/site.js" defer></script><script src="/tools/comfy/app.js?v=20261010-1" defer></script></body></html>
