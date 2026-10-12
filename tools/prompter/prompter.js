@@ -2,18 +2,20 @@ const $ = selector => document.querySelector(selector);
 const KEY = 'junaf.prompter.v1';
 const PREVIOUS_KEY = 'junaf.prompter.previous.v1';
 const sample = 'P1\n欢迎使用 JUNAF 提词器。\n点「编辑稿件」粘贴你的内容。\nP2\n按播放键开始自动滚动。\n使用左右箭头或左右滑动翻页。';
-const defaults = { text: sample, page: 0, offset: 0, speed: 32, fontSize: 44, prefix: 'P', breakToken: '↵', countdown: 3, keepAwake: true };
+const defaults = { text: sample, page: 0, offset: 0, speed: 32, fontSize: 44, prefix: 'P', breakToken: '↵', countdown: 3, keepAwake: true, mirrorX: false, columnWidth: 1100, midiMappings: {}, midiDeviceName: '' };
 let state = { ...defaults };
 try { state = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* Keep the default draft if saved data is invalid. */ }
 state.speed = Math.min(100, Math.max(8, Number(state.speed) || 32));
 state.fontSize = Math.min(96, Math.max(28, Number(state.fontSize) || 44));
 state.page = Math.max(0, Number(state.page) || 0);
 state.offset = Math.max(0, Number(state.offset) || 0);
+state.midiMappings = state.midiMappings && typeof state.midiMappings === 'object' ? state.midiMappings : {};
 
 const reading = $('#reading');
 const script = $('#script');
 const editor = $('#editor');
 const settings = $('#settings-dialog');
+const midiDialog = $('#midi-dialog');
 let pages = [];
 let playing = false;
 let countdownTimer = null;
@@ -25,6 +27,13 @@ let endHold = 0;
 let wakeLock = null;
 let saveTimer = null;
 let toastTimer = null;
+let midiAccess = null;
+let midiLearnAction = null;
+const midiActions = [
+  ['play', '播放'], ['pause', '暂停'], ['prev', '上一页'], ['next', '下一页'],
+  ['speedUp', '速度＋'], ['speedDown', '速度－'], ['speedSet', '旋钮直接调速（CC）']
+];
+const midiLast = new Map();
 
 function showToast(message) {
   const toast = $('#toast');
@@ -64,6 +73,8 @@ function render(restore = false) {
   state.page = Math.min(state.page, pages.length - 1);
   script.textContent = pages[state.page];
   script.style.fontSize = `${state.fontSize}px`;
+  script.style.maxWidth = `${state.columnWidth}px`;
+  script.classList.toggle('mirrored', !!state.mirrorX);
   $('#page-counter').textContent = `${String(state.page + 1).padStart(2, '0')} / ${String(pages.length).padStart(2, '0')}`;
   $('#prev').disabled = state.page === 0;
   $('#next').disabled = state.page === pages.length - 1;
@@ -78,8 +89,9 @@ function render(restore = false) {
 }
 
 function updatePlaybackUI() {
-  $('#play').textContent = playing || countdownTimer ? 'Ⅱ' : '▶';
-  $('#play').setAttribute('aria-label', playing || countdownTimer ? '暂停' : '播放');
+  $('#play').textContent = '▶';
+  $('#play').disabled = !!(playing || countdownTimer);
+  $('#pause').disabled = !(playing || countdownTimer);
   $('#status').textContent = countdownTimer ? '准备开始' : playing ? '播放中' : '已暂停';
 }
 async function acquireWakeLock() {
@@ -148,6 +160,14 @@ function togglePlayback() {
   }, 1000);
   updatePlaybackUI();
 }
+function startPlayback() { if (!playing && !countdownTimer) togglePlayback(); }
+function adjustSpeed(delta) { setSpeed(state.speed + delta); }
+function setSpeed(value) {
+  state.speed = Math.min(100, Math.max(8, Math.round(value)));
+  $('#speed').value = state.speed;
+  $('#speed-value').textContent = String(state.speed);
+  scheduleSave();
+}
 function changePage(direction) {
   const next = Math.min(Math.max(state.page + direction, 0), pages.length - 1);
   if (next === state.page) return;
@@ -161,10 +181,13 @@ function changePage(direction) {
   saveNow();
 }
 
-$('#play').addEventListener('click', togglePlayback);
+$('#play').addEventListener('click', startPlayback);
+$('#pause').addEventListener('click', stopPlayback);
 $('#prev').addEventListener('click', () => changePage(-1));
 $('#next').addEventListener('click', () => changePage(1));
-$('#speed').addEventListener('input', event => { state.speed = Number(event.target.value); $('#speed-value').textContent = String(state.speed); scheduleSave(); });
+$('#speed').addEventListener('input', event => setSpeed(Number(event.target.value)));
+$('#speed-up').addEventListener('click', () => adjustSpeed(1));
+$('#speed-down').addEventListener('click', () => adjustSpeed(-1));
 $('#font-size').addEventListener('input', event => {
   state.fontSize = Number(event.target.value);
   $('#font-value').textContent = String(state.fontSize);
@@ -224,6 +247,8 @@ $('#settings').addEventListener('click', () => {
   $('#prefix').value = state.prefix;
   $('#break-token').value = state.breakToken;
   $('#wake-lock').checked = state.keepAwake;
+  $('#mirror-x').checked = !!state.mirrorX;
+  $('#column-width').value = String(state.columnWidth);
   settings.showModal();
 });
 $('#save-settings').addEventListener('click', () => {
@@ -231,6 +256,8 @@ $('#save-settings').addEventListener('click', () => {
   state.prefix = $('#prefix').value.trim();
   state.breakToken = $('#break-token').value.trim();
   state.keepAwake = $('#wake-lock').checked;
+  state.mirrorX = $('#mirror-x').checked;
+  state.columnWidth = Number($('#column-width').value);
   render(true); saveNow(); settings.close(); showToast('设置已保存');
 });
 $('#fullscreen').addEventListener('click', async () => {
@@ -242,10 +269,115 @@ document.addEventListener('keydown', event => {
   if (event.code === 'Space') { event.preventDefault(); togglePlayback(); }
   else if (event.code === 'ArrowLeft') { event.preventDefault(); changePage(-1); }
   else if (event.code === 'ArrowRight') { event.preventDefault(); changePage(1); }
-  else if (event.code === 'ArrowUp') { event.preventDefault(); state.speed = Math.min(100, state.speed + 1); render(true); scheduleSave(); }
-  else if (event.code === 'ArrowDown') { event.preventDefault(); state.speed = Math.max(8, state.speed - 1); render(true); scheduleSave(); }
+  else if (event.code === 'ArrowUp' || event.key === '+') { event.preventDefault(); adjustSpeed(1); }
+  else if (event.code === 'ArrowDown' || event.key === '-' || event.key === '−') { event.preventDefault(); adjustSpeed(-1); }
+});
+function midiLabel(binding) {
+  if (!binding) return '未映射';
+  return `${binding.type === 'cc' ? 'CC' : '音符'} ${binding.number} · 通道 ${binding.channel + 1}`;
+}
+function renderMidiMappings() {
+  const list = $('#midi-mappings'); list.replaceChildren();
+  for (const [action, title] of midiActions) {
+    const row = document.createElement('div'); row.className = 'midi-map-row';
+    const name = document.createElement('span'); name.textContent = title;
+    const current = document.createElement('small'); current.textContent = midiLabel(state.midiMappings[action]);
+    const learn = document.createElement('button'); learn.type = 'button';
+    learn.textContent = midiLearnAction === action ? '等待按下…' : '学习';
+    learn.disabled = !midiAccess;
+    learn.addEventListener('click', () => {
+      midiLearnAction = midiLearnAction === action ? null : action;
+      $('#midi-status').textContent = midiLearnAction ? `请在所选设备上操作「${title}」的控制键` : '已取消学习';
+      renderMidiMappings();
+    });
+    const clear = document.createElement('button'); clear.type = 'button'; clear.textContent = '清除';
+    clear.disabled = !state.midiMappings[action];
+    clear.addEventListener('click', () => { delete state.midiMappings[action]; saveNow(); renderMidiMappings(); });
+    row.append(name, current, learn, clear); list.append(row);
+  }
+}
+function selectedMidiInput() {
+  return midiAccess?.inputs.get($('#midi-input').value) || null;
+}
+function refreshMidiInputs() {
+  const select = $('#midi-input');
+  const previous = select.value;
+  select.replaceChildren();
+  for (const input of midiAccess.inputs.values()) {
+    if (input.state !== 'connected') continue;
+    const option = document.createElement('option'); option.value = input.id; option.textContent = input.name || '未命名 MIDI 输入';
+    select.append(option);
+    input.onmidimessage = handleMidiMessage;
+  }
+  const inputs = [...midiAccess.inputs.values()].filter(input => input.state === 'connected');
+  const match = inputs.find(input => input.id === previous) || inputs.find(input => input.name === state.midiDeviceName) || inputs[0];
+  if (match) select.value = match.id;
+  else { const option = document.createElement('option'); option.value = ''; option.textContent = '未发现输入设备'; select.append(option); }
+  $('#midi-status').textContent = match ? `已连接：${match.name || 'MIDI 输入'}` : '已获授权，请插入 MIDI 输入设备';
+}
+function executeMidiAction(action, value) {
+  if (action === 'play') startPlayback();
+  else if (action === 'pause') stopPlayback();
+  else if (action === 'prev') changePage(-1);
+  else if (action === 'next') changePage(1);
+  else if (action === 'speedUp') adjustSpeed(1);
+  else if (action === 'speedDown') adjustSpeed(-1);
+  else if (action === 'speedSet') setSpeed(8 + value / 127 * 92);
+}
+function handleMidiMessage(event) {
+  if (event.currentTarget !== selectedMidiInput()) return;
+  const [status, number, value] = event.data || [];
+  const kind = status & 0xf0;
+  const type = kind === 0x90 && value > 0 ? 'note' : kind === 0xb0 ? 'cc' : null;
+  if (!type || !Number.isInteger(number)) return;
+  const channel = status & 0x0f;
+  if (midiLearnAction) {
+    if (type === 'cc' && value === 0) return;
+    if (midiLearnAction === 'speedSet' && type !== 'cc') {
+      $('#midi-status').textContent = '直接调速需要转动 MIDI CC 旋钮或推子'; return;
+    }
+    for (const [other, binding] of Object.entries(state.midiMappings)) {
+      if (binding?.type === type && binding.number === number && binding.channel === channel) delete state.midiMappings[other];
+    }
+    const action = midiLearnAction;
+    state.midiMappings[action] = {type, number, channel};
+    midiLearnAction = null; saveNow(); renderMidiMappings();
+    $('#midi-status').textContent = `已将 ${midiLabel(state.midiMappings[action])} 映射到「${midiActions.find(item => item[0] === action)[1]}」`;
+    return;
+  }
+  for (const [action, binding] of Object.entries(state.midiMappings)) {
+    if (!binding || binding.type !== type || binding.number !== number || binding.channel !== channel) continue;
+    const key = `${type}:${channel}:${number}`;
+    if (action === 'speedSet') { executeMidiAction(action, value); return; }
+    if (type === 'cc' && value === 0) { midiLast.delete(key); return; }
+    const now = performance.now();
+    if (now - (midiLast.get(key) || -1000) < 180) return;
+    midiLast.set(key, now);
+    executeMidiAction(action, value); return;
+  }
+}
+$('#midi-settings').addEventListener('click', () => { renderMidiMappings(); midiDialog.showModal(); });
+$('#midi-close').addEventListener('click', () => { midiLearnAction = null; midiDialog.close(); });
+midiDialog.addEventListener('close', () => { midiLearnAction = null; });
+$('#midi-connect').addEventListener('click', async () => {
+  if (!navigator.requestMIDIAccess) { $('#midi-status').textContent = '此浏览器不支持 Web MIDI；可使用 Chrome 或 Edge 的桌面版本。'; return; }
+  try {
+    midiAccess = await navigator.requestMIDIAccess({sysex: false});
+    midiAccess.onstatechange = refreshMidiInputs;
+    refreshMidiInputs(); renderMidiMappings();
+  } catch { $('#midi-status').textContent = '无法访问 MIDI。请检查浏览器权限和设备连接。'; }
+});
+$('#midi-input').addEventListener('change', () => {
+  state.midiDeviceName = selectedMidiInput()?.name || '';
+  midiLearnAction = null; midiLast.clear(); saveNow(); renderMidiMappings();
+  $('#midi-status').textContent = `当前输入：${state.midiDeviceName || '无'}`;
+});
+$('#midi-clear').addEventListener('click', () => {
+  if (!confirm('清除全部 MIDI 控制映射？')) return;
+  state.midiMappings = {}; midiLearnAction = null; saveNow(); renderMidiMappings();
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { stopPlayback(); saveNow(); } });
 window.addEventListener('beforeunload', saveNow);
 render(true);
 updatePlaybackUI();
+renderMidiMappings();
