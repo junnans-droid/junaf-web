@@ -5,26 +5,26 @@
   <meta name="theme-color" content="#eae7de">
   <meta name="description" content="JUNAF RVC 音色实验：训练自己的音色，转换上传的录音。">
   <title>音色实验 — JUNAF Tools</title>
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/rvc/style.css?v=20261002-1">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/rvc/style.css?v=20261012-1">
 </head>
 <body class="rvc-page"><a class="skip" href="#main">跳至正文</a>
   <header id="header"><a class="brand" href="/">JUNAF<span>.</span></a>
-    <nav id="nav" aria-label="主导航"><a href="/">首页</a><a href="/music/">Music</a><a href="/tools/" aria-current="page">Tools</a><a href="/account/">用户中心</a></nav>
-    <span class="header-note">JUNAF / VOICE EXPERIMENT</span><button id="menu" aria-controls="nav" aria-expanded="false">菜单</button>
+    <nav id="nav" aria-label="主导航"><a href="/">首页</a><a href="/music/">音乐</a><a href="/tools/" aria-current="page">工具</a><a href="/account/">用户中心</a></nav>
+    <span class="header-note">JUNAF / 音色实验</span><button id="menu" aria-controls="nav" aria-expanded="false">菜单</button>
   </header>
   <main id="main">
-    <section class="rvc-hero"><div class="kicker"><span>JUNAF / TOOLS 07</span><span>VOICE / TRAIN / TRANSFORM</span></div>
-      <h1>声音也可以，<br><em>重新构建<span class="accent">。</span></em></h1>
-      <p>用自己的录音训练音色，或用已准备的音色转换一段声音。训练与转换在 JUNAF 的 GPU 实例中完成。</p>
-      <div class="rvc-actions"><button id="enter" type="button">进入 RVC 工作台 ↗</button><a href="/tools/">返回工具目录</a></div>
-      <p id="status" role="status">工作台当前仅管理员账号可用。请先登录 JUNAF。</p>
+    <section class="rvc-hero"><div class="kicker"><span>JUNAF / 工具 07</span><span>自己的录音 → 自己的音色</span></div>
+      <h1>训练自己的音色，<br><em>让声音继续发生<span class="accent">。</span></em></h1>
+      <p>第一次使用，从上传自己的干净人声录音开始。完成训练后，就可以选择这个音色，上传另一段音频进行转换。还没有训练好的音色时，模型列表保持为空。</p>
+      <div class="rvc-actions"><button id="enter" type="button">打开中文音色工作台 ↗</button><a href="/tools/">返回工具目录</a></div>
+      <p id="status" role="status">当前仅管理员账号可用。4090 无卡模式可以查看工作台和上传录音；训练、特征提取与转换需要有卡开机。</p>
     </section>
     <section class="rvc-grid" aria-label="使用步骤">
-      <article><span>01 / TRAIN</span><h2>训练自己的音色</h2><p>准备有权使用的干净人声录音，在工作台的训练页多选上传。路径会自动填入，再完成预处理、特征提取、训练和索引生成。</p></article>
-      <article><span>02 / CONVERT</span><h2>转换一段声音</h2><p>选择音色模型，上传音频，调整音高与索引比例，试听并保存转换结果。首次可选择已安装的示范音色。</p></article>
-      <article><span>03 / PRIVATE</span><h2>按需使用 GPU</h2><p>AutoDL 实例开机后工作台可用；关闭实例可停止计费。RVC 与 YuE2 共用一张 GPU，请错开大任务。</p></article>
+      <article><span>01 / 准备</span><h2>上传自己的录音</h2><p>准备只有一个人声、尽量没有背景音乐和混响的录音。在“训练我的音色”页多选上传，点击“保存训练录音”；录音位置会自动填写。</p></article>
+      <article><span>02 / 训练</span><h2>按顺序完成三步</h2><p>点击“处理数据”“特征提取”“开始训练我的音色”。首次使用保留页面推荐的 v2、40k、RMVPE 设置。训练与转换需要 4090 有卡开机。</p></article>
+      <article><span>03 / 使用</span><h2>用自己的音色转换</h2><p>训练完成后，打开“音频转换”，点击“刷新我的音色”，选择模型、上传待转换音频，然后试听或下载结果。RVC 与 YuE2 共用 4090，请错开大任务。</p></article>
     </section>
-    <section class="rvc-note"><div class="kicker"><span>示范音色</span><span>LICENSE / ATTRIBUTION</span></div><p>已安装 Nova_HD_by_Kady，作者 Kady，采用 CC BY 4.0 许可。发布使用该音色制作的内容时，请保留作者署名。</p><a href="https://huggingface.co/Kady-x/Nova_HD_by_Kady" target="_blank" rel="noopener noreferrer">查看模型与许可 ↗</a></section>
+    <section class="rvc-note"><div class="kicker"><span>音色归属</span><span>由你训练 · 由你管理</span></div><p>工作台不会预选其他人的示范音色。请只上传你有权使用的录音；训练数据与生成的模型保存在 4090 实例的数据盘。</p></section>
   </main>
-  <script src="/site.js" defer></script><script src="/tools/rvc/app.js?v=20261002-1" defer></script>
+  <script src="/site.js" defer></script><script src="/tools/rvc/app.js?v=20261012-1" defer></script>
 </body></html>
