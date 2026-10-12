@@ -46,7 +46,7 @@
       article.append(el('time', new Date(job.createdAt).toLocaleString('zh-CN')));
       if (job.error) article.append(el('small', job.error));
       if (job.status === 'completed') {
-        article.append(el('small', `${seconds(job.duration)} · ${job.noteCount} 个音符`));
+        article.append(el('small', `${seconds(job.duration)} · ${job.noteCount} 个音符 · ${({balanced: '均衡', clean: '清晰优先', detail: '细节优先'})[job.preset] || '均衡'}`));
         const button = el('button', '打开多轨编辑 ↗'); button.type = 'button';
         button.addEventListener('click', () => openJob(job.id)); article.append(button);
       }
@@ -73,7 +73,7 @@
     if (!['wav', 'mp3', 'm4a', 'flac', 'ogg'].includes(extension)) { status('请选择 WAV、MP3、M4A、FLAC 或 OGG。'); return; }
     busy = true; $('am-submit').disabled = true; status('正在上传音频……');
     try {
-      const data = await api(`/tools/audio-midi/jobs?name=${encodeURIComponent(file.name)}`, {method: 'POST',
+      const data = await api(`/tools/audio-midi/jobs?name=${encodeURIComponent(file.name)}&preset=${encodeURIComponent($('am-preset').value)}`, {method: 'POST',
         headers: {'Content-Type': 'application/octet-stream'}, body: file});
       $('am-file').value = ''; status('上传完成。模型正在拆分声部并提取音符，完成后自动显示。');
       await refresh();
@@ -180,6 +180,16 @@
   $('am-delete-note').addEventListener('click', () => { const item = selectedNote(); if (!item?.note) return; item.track.notes.splice(selected.index, 1); selected = null; $('am-note-panel').hidden = true; markDirty(); renderTracks(); });
   $('am-add-track').addEventListener('click', () => { if (!project || project.tracks.length >= 12) return editStatus('最多 12 条音轨。'); project.tracks.push({id: `custom_${Date.now()}`, name: '新音轨', program: 0, isDrum: false, notes: []}); markDirty(); renderTracks(); });
   $('am-tempo').addEventListener('change', () => { if (!project) return; const tempo = Number($('am-tempo').value); if (tempo >= 40 && tempo <= 240) { project.tempo = tempo; markDirty(); } else $('am-tempo').value = project.tempo; });
+  $('am-quantize').addEventListener('click', () => {
+    if (!project) return;
+    const track = project.tracks.find(item => item.id === selected?.trackId);
+    if (!track) return editStatus('请先点击要对齐的音轨中的一个音符。');
+    const division = Number($('am-grid').value);
+    const step = 60 / project.tempo * 4 / division;
+    if (!confirm(`将「${track.name}」的 ${track.notes.length} 个音符起点对齐到 ${division} 分音符网格？建议先核对 BPM。`)) return;
+    for (const note of track.notes) note.start = Math.max(0, Math.round(Math.round(note.start / step) * step * 1000) / 1000);
+    markDirty(); renderTracks(); showNote(); editStatus(`已对齐「${track.name}」起点。请试听核对，然后保存。`);
+  });
   $('am-save').addEventListener('click', async () => {
     if (!currentJob || !project) return;
     $('am-save').disabled = true; editStatus('正在保存编辑……');
