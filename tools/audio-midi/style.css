@@ -3,3 +3,5 @@
 .am-playback progress{width:100%;height:.45rem;accent-color:var(--red)}
 .am-playback time{font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:600px){.am-playback{grid-template-columns:1fr auto}.am-playback progress{grid-column:1/-1;grid-row:2}}
+
+#am-preset,#am-grid{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;padding:.55rem;max-width:100%}#am-preset{display:block;margin-top:.45rem;font-size:.9rem}
