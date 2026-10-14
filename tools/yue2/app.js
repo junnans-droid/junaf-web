@@ -41,7 +41,7 @@ function render(){
     const badge=document.createElement('span');badge.textContent=(job.mode==='instrumental'?(job.scoreImported?'曲谱纯音乐 · ':'纯音乐 · '):'歌曲 · ')+({queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status);
     if(job.workflow&&job.workflow!=='standard')badge.textContent=({short:'短旋律 · ',arrange:'旋律编曲 · ',cover:'Cover · '}[job.workflow]||'')+badge.textContent;
     if(job.renderIntent==='accompaniment')badge.textContent='AI 伴奏实验 · 不保证同步 · '+badge.textContent;
-    head.append(title,badge);const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN');article.append(head,time);
+    head.append(title,badge);if(job.styleProfileName){const p=document.createElement('p');p.textContent='参考风格档案：'+job.styleProfileName;article.append(p);}const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN');article.append(head,time);
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
     if(job.status==='queued'&&!workerOnline){const p=document.createElement('p');p.textContent='GPU 生成节点尚未就绪，恢复后继续处理。';article.append(p)}
     if(job.audioAvailable){const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.crossOrigin='use-credentials';audio.src=BASE+'/tools/yue2/jobs/'+job.id+'/audio';article.append(audio);const download=document.createElement('button');download.type='button';download.textContent='下载 FLAC';download.onclick=async()=>{download.disabled=true;try{const response=await fetch(audio.src,{credentials:'include'});if(!response.ok)throw Error('下载失败');const u=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=u;a.download='JUNAF-'+job.id+'.flac';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch(e){status(e.message);}finally{download.disabled=false;}};article.append(download);if(job.durationSeconds){const p=document.createElement('p');p.textContent='实际时长 '+job.durationSeconds.toFixed(1)+' 秒';article.append(p);if(job.nominalSeconds){const timing=document.createElement('p');timing.textContent='谱面参考 '+job.nominalSeconds.toFixed(1)+' 秒';if(Math.abs(job.durationSeconds-job.nominalSeconds)>Math.max(2,job.nominalSeconds*.25)){timing.className='yue2-timing-warning';timing.textContent+=' · 模型未严格遵守谱面长度，请试听核对；不作为严格短段成品。';}article.append(timing)}}}
@@ -88,7 +88,7 @@ $('generate-form').onsubmit=async event=>{
   }
   busy=true;updateButton();status('正在提交…');
   try{
-    await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,style,lyrics,abc,workflow,renderIntent:gpuPlan?.renderIntent||'melody',sourceConfirmed:workflow==='standard'||window.JunafYueCreation.reviewed()})});
+    await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,style,lyrics,abc,workflow,...(window.JunafAppliedStyleProfile?.prompt===style&&workflow==='standard'?{styleProfileName:window.JunafAppliedStyleProfile.name}:{}),renderIntent:gpuPlan?.renderIntent||'melody',sourceConfirmed:workflow==='standard'||window.JunafYueCreation.reviewed()})});
     status('任务已提交，正在等待生成');
   }catch(error){notice=error.message;status(notice)}
   finally{busy=false;updateButton();await refresh()}
