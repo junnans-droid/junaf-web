@@ -35,5 +35,13 @@ function fromNotes(notes,bpm){
  for(let i=0;i<slots.length;){let end=i+1;while(end<slots.length&&slots[end]===slots[i]&&end%16!==0)end++;const n=slots[i],oct=n===null?0:Math.floor(n/12)-5;let name=n===null?'z':names[((n%12)+12)%12];if(oct>0)name+="'".repeat(oct);if(oct<0)name+=','.repeat(-oct);parts.push(name+(end-i)+'/4');if(end%16===0)parts.push('|');i=end;}
  return `X:1\nT:JUNAF reference sketch\nM:4/4\nL:1/4\nQ:1/4=${bpm}\nK:C\n${parts.join(' ')} |`;
 }
-const api={draft,parse,fromNotes};if(typeof module!=='undefined')module.exports=api;if(typeof window!=='undefined')window.JunafMelody=api;
+function toABC(events,bpm){
+ if(!Array.isArray(events)||!events.length||events.length>128||!Number.isFinite(bpm)||bpm<20||bpm>400)throw Error('音符数量或速度无效');
+ const names=['=C','^C','=D','^D','=E','=F','^F','=G','^G','=A','^A','=B'];let ticks=0;const parts=[];
+ for(const event of events){let left=event.durationBeats*4;if(!Number.isInteger(left)||left<1||left>16)throw Error('音符编辑支持 0.25–4 拍，以 0.25 拍为步长');let token='z';if(event.midi!==null){if(!Number.isInteger(event.midi)||event.midi<36||event.midi>96)throw Error('请选择 MIDI 36–96 范围内音符');const oct=Math.floor(event.midi/12)-5;token=names[event.midi%12]+(oct>0?"'".repeat(oct):','.repeat(-oct));}
+ while(left){const n=Math.min(left,16-ticks%16);parts.push(token+n+'/4');ticks+=n;left-=n;if(ticks%16===0)parts.push('|');}}
+ if(ticks%16)parts.push('z'+(16-ticks%16)+'/4 |');
+ return `X:1\nT:JUNAF edited melody\nM:4/4\nL:1/4\nQ:1/4=${bpm}\nK:C\n${parts.join(' ')}`;
+}
+const api={draft,parse,fromNotes,toABC};if(typeof module!=='undefined')module.exports=api;if(typeof window!=='undefined')window.JunafMelody=api;
 })();
