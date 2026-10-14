@@ -40,6 +40,7 @@ function render(){
     const title=document.createElement('strong');title.textContent=job.style.length>46?job.style.slice(0,46)+'…':job.style;
     const badge=document.createElement('span');badge.textContent=(job.mode==='instrumental'?(job.scoreImported?'曲谱纯音乐 · ':'纯音乐 · '):'歌曲 · ')+({queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status);
     if(job.workflow&&job.workflow!=='standard')badge.textContent=({short:'短旋律 · ',arrange:'旋律编曲 · ',cover:'Cover · '}[job.workflow]||'')+badge.textContent;
+    if(job.renderIntent==='accompaniment')badge.textContent='AI 伴奏实验 · 不保证同步 · '+badge.textContent;
     head.append(title,badge);const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN');article.append(head,time);
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
     if(job.status==='queued'&&!workerOnline){const p=document.createElement('p');p.textContent='GPU 生成节点尚未就绪，恢复后继续处理。';article.append(p)}
@@ -73,7 +74,10 @@ $('generate-form').onsubmit=async event=>{
   const mode=selectedMode(),style=$('style').value.trim(),lyrics=mode==='song'?$('lyrics').value.trim():'';
   if(style.length<8||(mode==='song'&&lyrics.length<8)){notice=mode==='song'?'声音方向和原创歌词都需要至少 8 个字。':'声音方向至少填写 8 个字。';status(notice);return}
   const workflow=window.JunafYueCreation?.path()||'standard';
+  const gpuPlan=window.JunafAccompaniment?.gpuInput();
+  if(gpuPlan?.error){notice=gpuPlan.error;status(notice);return;}
   let abc=workflow==='standard'?'':window.JunafYueCreation.abc();
+  if(gpuPlan)abc=gpuPlan.abc;
   if(workflow!=='standard'&&(!abc||!window.JunafYueCreation.reviewed())){notice='请先准备并校对旋律，勾选确认后再生成。';status(notice);return;}
   if(abc&&(!/^X:\s*\d+/m.test(abc)||!/^K:\s*\S+/m.test(abc))){status('旋律需要有效的 ABC（X: 与 K: 行）');return;}
   const file=mode==='instrumental'&&workflow==='standard' ? $('abc-file').files[0] : null;
@@ -84,7 +88,7 @@ $('generate-form').onsubmit=async event=>{
   }
   busy=true;updateButton();status('正在提交…');
   try{
-    await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,style,lyrics,abc,workflow,sourceConfirmed:workflow==='standard'||window.JunafYueCreation.reviewed()})});
+    await api('/tools/yue2/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,style,lyrics,abc,workflow,renderIntent:gpuPlan?.renderIntent||'melody',sourceConfirmed:workflow==='standard'||window.JunafYueCreation.reviewed()})});
     status('任务已提交，正在等待生成');
   }catch(error){notice=error.message;status(notice)}
   finally{busy=false;updateButton();await refresh()}

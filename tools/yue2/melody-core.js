@@ -33,7 +33,7 @@ function fromNotes(notes,bpm){
  const slots=Array(total).fill(null);for(const n of notes){const a=Math.round(n.startBeat*4),b=Math.round((n.startBeat+n.durationBeats)*4);for(let i=a;i<b&&i<total;i++)slots[i]=n.midi;}
  const names=['=C','^C','=D','^D','=E','=F','^F','=G','^G','=A','^A','=B'];const parts=[];
  for(let i=0;i<slots.length;){let end=i+1;while(end<slots.length&&slots[end]===slots[i]&&end%16!==0)end++;const n=slots[i],oct=n===null?0:Math.floor(n/12)-5;let name=n===null?'z':names[((n%12)+12)%12];if(oct>0)name+="'".repeat(oct);if(oct<0)name+=','.repeat(-oct);parts.push(name+(end-i)+'/4');if(end%16===0)parts.push('|');i=end;}
- return `X:1\nT:JUNAF reference sketch\nM:4/4\nL:1/4\nQ:1/4=${bpm}\nK:C\n${parts.join(' ')} |`;
+ return `X:1\nT:JUNAF reference sketch\nM:4/4\nL:1/4\nQ:1/4=${bpm}\nK:C\n${parts.join(' ').replace(/[\s|]+$/,'')} |`;
 }
 function toABC(events,bpm){
  if(!Array.isArray(events)||!events.length||events.length>128||!Number.isFinite(bpm)||bpm<20||bpm>400)throw Error('音符数量或速度无效');
