@@ -13,3 +13,5 @@
 .yue2-job .yue2-timing-warning{color:#9a3928;border-left:3px solid #b84f38;padding:8px 12px;background:#f6eee6}
 
 .note-table-scroll{max-height:380px;overflow:auto;margin:16px 0}.note-table-scroll table{width:100%;text-align:left;border-collapse:collapse}.note-table-scroll td,.note-table-scroll th{padding:8px;border-bottom:1px solid #bdb9ad}.note-table-scroll input{width:85px}.note-table-scroll select{min-width:90px}
+
+@media(max-width:520px){.note-table-scroll th{white-space:nowrap}.note-table-scroll td,.note-table-scroll th{padding:6px}.note-table-scroll input{width:65px}.note-table-scroll select{min-width:76px}.note-table-scroll button{white-space:nowrap;padding:8px 10px}.note-table-scroll table{font-size:14px}}
