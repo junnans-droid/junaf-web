@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#eae7de">
   <meta name="description" content="JUNAF 音乐生成实验：选择歌曲或纯音乐，描述声音方向，获得可以聆听的作品。">
   <title>音乐生成实验 — JUNAF Tools</title>
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/yue2/style.css?v=20261004-2">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/tools/yue2/style.css?v=20261015-1">
 <link rel="stylesheet" href="/tools/workspace.css?v=20261014-1"></head>
 <body class="yue2-page"><a class="skip" href="#main">跳至正文</a>
   <header id="header"><a class="brand" href="/">JUNAF<span>.</span></a>
@@ -16,6 +16,20 @@
     <h1>从一句想法，<br><em>开始一首歌<span class="accent">。</span></em></h1>
     <p>选择歌曲或纯音乐，描述想听见的声音。YuE2 会先构思旋律与和弦，再生成可以播放的音乐。</p>
   </section>
+  <section class="melody-desk" aria-labelledby="melody-heading">
+<div class="kicker">01 / 旋律工作台 · 浏览器内准备，无需 GPU</div><h2 id="melody-heading">先有旋律，再让声音发生。</h2>
+<label for="creation-path">从哪里开始</label><select id="creation-path"><option value="standard">自由创作 · 原有歌曲 / 纯音乐</option><option value="short">创作短旋律</option><option value="arrange">根据我的旋律编曲</option><option value="cover">重新演绎 Cover</option></select>
+<p id="path-help" role="status">选择一个入口。旋律草稿可先在本机准备，提交生成需要登录和 GPU 就绪。</p>
+<div id="melody-editor" hidden>
+<div class="melody-options"><label>速度 BPM<input id="melody-bpm" type="number" min="40" max="200" value="100"></label><label>草稿小节数<select id="melody-bars"><option value="4">4 小节</option><option value="8">8 小节</option></select></label><button type="button" id="make-melody">构思一段旋律</button></div>
+<p>短旋律使用 C 大调规则构思，不是 AI 音频生成；本机试听为合成音色。可修改 ABC 后重新试听，最终配器由 YuE2 生成，独奏与时长需试听确认。</p>
+<div id="reference-field" hidden><label for="melody-reference">参考录音 · 清唱或单乐器 · 30 秒 / 12 MB 以内</label><input id="melody-reference" type="file" accept="audio/*"><audio id="reference-player" controls hidden></audio><button type="button" id="transcribe-reference">提取旋律草稿</button><p>本机粗转谱仅适用于单声部。完整歌曲混音请先导入已校对的 ABC；SheetSage2 混音转谱尚未接通。重新演绎会生成新的声音，不保留原始人声录音或克隆音色。</p></div>
+<label for="melody-import">导入已校对 ABC · 32 KB 以下</label><input id="melody-import" type="file" accept=".abc,.txt,text/plain">
+<label for="melody-abc">旋律 ABC · 可直接编辑音符、节奏和小节</label><textarea id="melody-abc" rows="10" maxlength="32000" spellcheck="false" placeholder="X:1&#10;M:4/4&#10;L:1/4&#10;Q:1/4=100&#10;K:C&#10;C D E G| E D C2|"></textarea>
+<p>本机试听支持单旋律、C 大调、音符 C–B / c–b、升降号、休止符 z 和音长（如 C2、D/2）。复杂声部与其他调号可导入提交，但本机试听会明确提示不支持。</p>
+<div class="melody-actions"><button type="button" id="preview-melody">试听旋律</button><button type="button" id="stop-melody">停止试听</button><button type="button" id="download-melody">下载 ABC</button><button type="button" id="save-melody">保存本机草稿</button><button type="button" id="restore-melody">恢复本机草稿</button><button type="button" id="clear-melody">清除本机草稿</button></div>
+<label><input id="melody-reviewed" type="checkbox"> 我已试听 / 校对旋律，并有权使用参考素材。提交时以这份曲谱为参考。</label><p id="melody-status" role="status" aria-live="polite"></p>
+</div></section>
   <section id="login" class="yue2-login" hidden><h2>登录后开始创作</h2><p>你的生成任务与作品保存在 JUNAF 账号中。</p><a href="/account/?next=%2Ftools%2Fyue2%2F">前往登录 ↗</a></section>
   <section id="workspace" class="yue2-workspace" hidden>
     <div class="yue2-form-wrap"><div class="kicker"><span>01 / 输入</span><span>THE IDEA</span></div>
@@ -32,5 +46,5 @@
     </div>
   </section>
   <section class="yue2-foot"><a href="/tools/">← 返回 Tools</a><span>JUNAF / ART · DESIGN · CONSTRUCTION</span></section>
-  </main><script src="/site.js" defer></script><script src="/tools/yue2/app.js?v=20261004-2" defer></script>
+  </main><script src="/site.js" defer></script><script src="/tools/jianpu/core.js" defer></script><script src="/tools/yue2/melody-core.js?v=20261015-1" defer></script><script src="/tools/yue2/melody.js?v=20261015-1" defer></script><script src="/tools/yue2/app.js?v=20261015-1" defer></script>
 <script src="/tools/workspace.js?v=20261014-1" defer></script></body></html>
