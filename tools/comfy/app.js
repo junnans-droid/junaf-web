@@ -118,8 +118,8 @@ function render(){
       article.append(quality);
     }
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
-    if(job.status==='queued'&&!(job.mode==='loop'?loopOnline:workerOnline)){
-      const p=document.createElement('p');p.textContent=job.mode==='loop'?'Loop 渲染器未连接，实例开机后会继续处理。':'GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p);
+    if(job.status==='queued'&&!(['h3','h3-loop'].includes(job.mode)?h3Online:job.mode==='volume-loop'?volumeOnline:job.mode==='loop'?loopOnline:workerOnline)){
+      const p=document.createElement('p');p.textContent=['h3','h3-loop'].includes(job.mode)?'H3 工作进程未连接，请启动已安装 H3 的 5090 实例1。':job.mode==='loop'?'Loop 渲染器未连接，实例开机后会继续处理。':'GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p);
     }
     if(job.videoAvailable){
       const url=BASE+'/tools/comfy/jobs/'+job.id+'/video';article.append(player(url,['loop','volume-loop','h3-loop'].includes(job.mode)));
@@ -150,7 +150,7 @@ async function refresh(){
     const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality]));
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
     if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!activeWorker()?
-      (currentMode()==='loop'?'Loop 渲染器未连接，实例开机后页面会自动恢复。':'GPU 当前未连接，开机后此页面会自动恢复。'):
+      (['h3','h3-loop'].includes(currentMode())?'H3 工作进程未连接；当前部署在 5090 实例1，开机后自动恢复。':currentMode()==='loop'?'Loop 渲染器未连接，实例开机后页面会自动恢复。':'GPU 当前未连接，开机后此页面会自动恢复。'):
       jobs.some(job=>['queued','running'].includes(job.status))?'视频正在生成，页面会自动更新。':'准备就绪'));
   }catch(error){
     if(error.status===401){$('workspace').hidden=true;$('login').hidden=false;$('restricted').hidden=true}
