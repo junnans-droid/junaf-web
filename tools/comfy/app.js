@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
 const $=id=>document.getElementById(id);
-let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false;
+let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false;
 let jobs=[],previewUrl=null,notice='',continueFrom=null;
 let lastRenderKey='';
 
@@ -35,19 +35,23 @@ $('copy-current-prompt').onclick=()=>{
   copyPrompt(text,$('copy-current-prompt'),$('prompt'));
 };
 function currentMode(){return continueFrom?'video':$('mode').value}
-function activeWorker(){return currentMode()==='loop'?loopOnline:workerOnline}
+function activeWorker(){return currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
 function button(){
   const blocked=jobs.some(job=>['queued','running'].includes(job.status));
   $('submit').disabled=busy||!enabled||!activeWorker()||blocked;
-  $('submit').textContent=busy?'正在提交…':continueFrom?'按原画面续接 ↗':currentMode()==='loop'?'生成 10 秒 Loop ↗':'生成视频 ↗';
+  $('submit').textContent=busy?'正在提交…':continueFrom?'按原画面续接 ↗':currentMode()==='volume-loop'?'生成视觉循环 ↗':currentMode()==='loop'?'生成参考图循环 ↗':'生成视频 ↗';
 }
 function applyMode(){
-  const looping=currentMode()==='loop';
+  const volume=currentMode()==='volume-loop',looping=['loop','volume-loop'].includes(currentMode());
+  $('reference-field').hidden=volume;$('image').required=!volume&&!continueFrom;$('image').disabled=volume||!!continueFrom;
+  $('density-field').hidden=!volume;
+  $('loop-hint').textContent=volume?'独立的程序化体积烟雾场景，无需上传参考图。烟雾持续向下，底部向外扩散；洞内雾量可调。当前周期为 8 秒，可重复播放延长。使用 GPU 光线步进与周期密度场，不使用倒放或首尾淡化，也不是 AI 扩散生成。':'保持参考图中的构图，用周期纹理产生运动。此模式使用确定性算法，不解析文字描述。';
   $('loop-hint').hidden=!looping;$('prompt-field').hidden=looping;$('prompt').required=!looping;
   $('duration-field').hidden=looping;$('speed-field').hidden=!looping;
   $('mode').disabled=!!continueFrom;
-  if(looping)$('duration').value='10s';
-  $('form-note').textContent=looping?'固定 10 秒、24 帧/秒。烟雾向下流动并在底部扩散；首尾帧接缝经编码后再次校验。':'每次只处理一个任务。续接自动沿用原提示词、画面尺寸与上一段尾帧；像素检查不等于风格验收，完成后请预览确认。';
+  if(looping)$('duration').value=volume?'8s':'10s';
+  else if($('duration').value==='8s')$('duration').value='5s';
+  $('form-note').textContent=volume?'视觉循环用于舞台、秀场和装置背景；与长视频片段续接独立。周期状态闭合后仍需预览确认艺术效果。':looping?'固定 10 秒、24 帧/秒。烟雾向下流动并在底部扩散；首尾帧接缝经编码后再次校验。':'每次只处理一个任务。续接自动沿用原提示词、画面尺寸与上一段尾帧；像素检查不等于风格验收，完成后请预览确认。';
   button();
 }
 function selectContinuation(job){
@@ -94,12 +98,12 @@ function render(){
     head.className='comfy-job-head';title.textContent=job.prompt.length>45?job.prompt.slice(0,45)+'…':job.prompt;
     badge.textContent={queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status;
     head.append(title,badge);article.append(head);
-    const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN')+' · '+(job.size||'480p')+' · '+(job.duration||'2s')+(job.mode==='loop'?' · 无缝 Loop':'');article.append(time);
-    if(job.continuity==='strict'||job.mode==='loop'){
+    const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN')+' · '+(job.size||'480p')+' · '+(job.duration||'2s')+(['loop','volume-loop'].includes(job.mode)?' · 视觉循环':'');article.append(time);
+    if(job.continuity==='strict'||['loop','volume-loop'].includes(job.mode)){
       const quality=document.createElement('p');
       quality.textContent=job.status==='completed'&&job.quality?.length?
-        (job.mode==='loop'?'已通过首尾接缝检查 · 灰度差 '+job.quality[0].loopSeamMae:'已通过基础接缝与明暗检查 · 风格和运动仍需预览确认'):
-        (job.mode==='loop'?'10 秒周期流动 · 生成后检查首尾接缝':'尾帧续接 · 自动沿用原提示词与画面尺寸');
+        (job.mode==='volume-loop'?'周期边界检查通过 · 请预览确认运动和质感':job.mode==='loop'?'已通过首尾接缝检查 · 灰度差 '+job.quality[0].loopSeamMae:'已通过基础接缝与明暗检查 · 风格和运动仍需预览确认'):
+        (job.mode==='volume-loop'?'体积密度场与运动状态周期闭合 · 无倒放':job.mode==='loop'?'10 秒周期流动 · 生成后检查首尾接缝':'尾帧续接 · 自动沿用原提示词与画面尺寸');
       article.append(quality);
     }
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
@@ -107,10 +111,10 @@ function render(){
       const p=document.createElement('p');p.textContent=job.mode==='loop'?'Loop 渲染器未连接，实例开机后会继续处理。':'GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p);
     }
     if(job.videoAvailable){
-      const url=BASE+'/tools/comfy/jobs/'+job.id+'/video';article.append(player(url,job.mode==='loop'));
+      const url=BASE+'/tools/comfy/jobs/'+job.id+'/video';article.append(player(url,['loop','volume-loop'].includes(job.mode)));
       const actions=document.createElement('div');actions.className='comfy-actions';
       const download=document.createElement('a');download.className='comfy-download';download.href=BASE+'/tools/comfy/jobs/'+job.id+'/download';download.textContent='下载 MP4 ↧';actions.append(download);
-      if(job.mode!=='loop'){
+      if(!['loop','volume-loop'].includes(job.mode)){
         const promptDetails=document.createElement('details');promptDetails.className='comfy-prompt-details';
         const summary=document.createElement('summary');summary.textContent='查看完整提示词';
         const promptText=document.createElement('textarea');promptText.readOnly=true;promptText.rows=4;promptText.value=job.prompt;
@@ -130,7 +134,7 @@ async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
     const data=await api('/tools/comfy/jobs');$('workspace').hidden=false;$('login').hidden=true;$('restricted').hidden=true;
-    enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;
+    enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;
     jobs=Array.isArray(data.jobs)?data.jobs:[];
     const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality]));
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
@@ -152,7 +156,7 @@ $('image').addEventListener('change',()=>{
 $('generate-form').onsubmit=async event=>{
   event.preventDefault();if(busy||!enabled||!activeWorker())return;
   const file=$('image').files[0],prompt=$('prompt').value.trim(),mode=currentMode();
-  if(!continueFrom&&(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024)){
+  if(mode!=='volume-loop'&&!continueFrom&&(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024)){
     notice='请选择 10 MB 以下的 PNG、JPG 或 WebP 图片';status(notice);return;
   }
   if(mode==='video'&&prompt.length<8){notice='动态描述至少填写 8 个字符';status(notice);return}
@@ -162,10 +166,10 @@ $('generate-form').onsubmit=async event=>{
       await api('/tools/comfy/jobs/'+continueFrom+'/continue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:$('duration').value})});
       $('cancel-continuation').click();
     }else{
-      await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':file.type,
-        'X-Comfy-Prompt':encodeURIComponent(mode==='loop'?'向下流动的烟雾视觉 Loop':prompt),
-        'X-Comfy-Mode':mode,'X-Comfy-Speed':$('speed').value,
-        'X-Comfy-Size':$('size').value,'X-Comfy-Duration':mode==='loop'?'10s':$('duration').value},body:file});
+      await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':mode==='volume-loop'?'application/octet-stream':file.type,
+        'X-Comfy-Prompt':encodeURIComponent(mode==='volume-loop'?'周期体积烟雾':mode==='loop'?'向下流动的烟雾视觉 Loop':prompt),
+        'X-Comfy-Mode':mode,'X-Comfy-Speed':$('speed').value,'X-Comfy-Density':$('density').value,
+        'X-Comfy-Size':$('size').value,'X-Comfy-Duration':mode==='volume-loop'?'8s':mode==='loop'?'10s':$('duration').value},body:mode==='volume-loop'?new Uint8Array(0):file});
     }
     notice='任务已提交，正在等待生成';status(notice);
   }catch(error){notice=error.message;status(notice)}
