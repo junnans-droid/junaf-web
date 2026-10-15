@@ -16,6 +16,24 @@ async function api(path,options={}){
   finally{clearTimeout(timeout)}
 }
 function status(message){$('status').textContent=message}
+async function copyPrompt(text,button,fallback){
+  const original=button.textContent;
+  try{
+    if(!navigator.clipboard?.writeText)throw Error('clipboard unavailable');
+    await navigator.clipboard.writeText(text);
+    button.textContent='已复制提示词';
+    setTimeout(()=>{button.textContent=original},2000);
+  }catch{
+    fallback.hidden=false;fallback.focus();fallback.select();
+    button.textContent='请复制已选中的提示词';
+    setTimeout(()=>{button.textContent=original},4000);
+  }
+}
+$('copy-current-prompt').onclick=()=>{
+  const text=$('prompt').value.trim();
+  if(!text){status('请先填写动态描述，或选择一条视频续接');return}
+  copyPrompt(text,$('copy-current-prompt'),$('prompt'));
+};
 function currentMode(){return continueFrom?'video':$('mode').value}
 function activeWorker(){return currentMode()==='loop'?loopOnline:workerOnline}
 function button(){
@@ -29,7 +47,7 @@ function applyMode(){
   $('duration-field').hidden=looping;$('speed-field').hidden=!looping;
   $('mode').disabled=!!continueFrom;
   if(looping)$('duration').value='10s';
-  $('form-note').textContent=looping?'固定 10 秒、24 帧/秒。烟雾向下流动并在底部扩散；首尾帧接缝经编码后再次校验。':'每次只处理一个任务。续接时锁定原动态描述，以尾帧延伸并检查画面一致性。';
+  $('form-note').textContent=looping?'固定 10 秒、24 帧/秒。烟雾向下流动并在底部扩散；首尾帧接缝经编码后再次校验。':'每次只处理一个任务。续接自动沿用原提示词、画面尺寸与上一段尾帧；像素检查不等于风格验收，完成后请预览确认。';
   button();
 }
 function selectContinuation(job){
@@ -80,8 +98,8 @@ function render(){
     if(job.continuity==='strict'||job.mode==='loop'){
       const quality=document.createElement('p');
       quality.textContent=job.status==='completed'&&job.quality?.length?
-        (job.mode==='loop'?'已通过首尾接缝检查 · 灰度差 '+job.quality[0].loopSeamMae:'已通过尾帧衔接与画面一致性检查'):
-        (job.mode==='loop'?'10 秒周期流动 · 生成后检查首尾接缝':'严格续接 · 保持原动态描述与构图');
+        (job.mode==='loop'?'已通过首尾接缝检查 · 灰度差 '+job.quality[0].loopSeamMae:'已通过基础接缝与明暗检查 · 风格和运动仍需预览确认'):
+        (job.mode==='loop'?'10 秒周期流动 · 生成后检查首尾接缝':'尾帧续接 · 自动沿用原提示词与画面尺寸');
       article.append(quality);
     }
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
@@ -93,6 +111,14 @@ function render(){
       const actions=document.createElement('div');actions.className='comfy-actions';
       const download=document.createElement('a');download.className='comfy-download';download.href=BASE+'/tools/comfy/jobs/'+job.id+'/download';download.textContent='下载 MP4 ↧';actions.append(download);
       if(job.mode!=='loop'){
+        const promptDetails=document.createElement('details');promptDetails.className='comfy-prompt-details';
+        const summary=document.createElement('summary');summary.textContent='查看完整提示词';
+        const promptText=document.createElement('textarea');promptText.readOnly=true;promptText.rows=4;promptText.value=job.prompt;
+        promptText.setAttribute('aria-label','本视频的完整提示词');
+        promptDetails.append(summary,promptText);article.append(promptDetails);
+        const copy=document.createElement('button');copy.type='button';copy.textContent='复制提示词';
+        copy.onclick=()=>copyPrompt(job.prompt,copy,{set hidden(value){promptDetails.open=!value},focus:()=>promptText.focus(),select:()=>promptText.select()});
+        actions.append(copy);
         const next=document.createElement('button');next.type='button';next.className='comfy-download';next.textContent='按原画面续接 ↗';next.onclick=()=>selectContinuation(job);actions.append(next);
       }
       article.append(actions);
