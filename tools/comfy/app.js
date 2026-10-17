@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
 const $=id=>document.getElementById(id);
-let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false;
+let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false,foundationOnline=false;
 let jobs=[],previewUrl=null,notice='',continueFrom=null;
 let lastRenderKey='';
 
@@ -35,7 +35,8 @@ $('copy-current-prompt').onclick=()=>{
   copyPrompt(text,$('copy-current-prompt'),$('prompt'));
 };
 function currentMode(){return continueFrom?'video':$('mode').value}
-function activeWorker(){return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
+function activeWorker(){return foundationOnline&&modelWorker()}
+function modelWorker(){return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
 function button(){
   const blocked=jobs.some(job=>['queued','running'].includes(job.status));
   $('submit').disabled=busy||!enabled||!activeWorker()||blocked;
@@ -59,6 +60,9 @@ function applyMode(){
   $('model-hint').textContent=h3?'MiniMax H3 FL2VA · 参考图＋提示词。原生图像转视频，支持约 5 秒或 10 秒；当前未开放尾帧续接。':'Wan 2.2 TI2V 5B · 参考图＋提示词。支持约 2 秒、5 秒或两段续接约 10 秒；已有作品可继续使用尾帧续接。';
   $('form-note').textContent=h3?'高清与1080p当前开放约5秒。1080p为放大输出；参考图按比例留边。提示词原样传给模型，生成效果请预览后自行判断。':'参考图与提示词共同控制画面。续接会沿用原提示词和尺寸；一致性检查不能代替视觉验收。';
   if(h3&&$('size').value==='3000x1000')$('form-note').textContent='3:1 舞台宽屏：原生1248×416，放大交付3000×1000，支持约5秒或10秒。建议上传3:1参考图；其他比例会等比留边。';
+  const native=h3?($('size').value==='3000x1000'?'1248 × 416':$('size').value==='480p'?'832 × 480':'1344 × 768'):({'480p':'832 × 480','720p':'1280 × 704','1080p':'1920 × 1088'}[$('size').value]);
+  const exported=$('size').value==='3000x1000'?'3000 × 1000':$('size').value==='1080p'?'1920 × 1080':native;
+  $('size-note').textContent='原生生成：'+native+'；导出：'+exported+(native!==exported?'（放大或裁切，不增加原生细节）':'');
   button();
 }
 function selectContinuation(job){
@@ -115,6 +119,8 @@ function render(){
     }else if(['loop','volume-loop'].includes(job.mode)){
       const p=document.createElement('p');p.textContent='历史周期算法作品 · 请预览确认效果';article.append(p);
     }
+    if(job.processing){const p=document.createElement('p');p.textContent=job.processing.status==='fallback'?'输出修正未完成，当前为处理前视频。':job.processing.status==='applied'?'已应用：'+[job.processing.stabilize?'轻度防抖':'',job.processing.colorLock?'固定色调':''].filter(Boolean).join('、'):'未启用输出修正 · 原始视频';article.append(p)}
+    if(job.archive){const d=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent='查看生成参数与尺寸';pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify({workflows:job.archive.workflows.map(w=>({sha256:w.sha256,graph:w.graph})),output:job.archive.output,environment:job.archive.environment},null,2);d.append(summary,pre);article.append(d)}
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
     if(job.status==='failed'&&job.error?.startsWith('连续生成未通过视觉一致性检查')){const p=document.createElement('p');p.textContent='此为旧检查策略产生的失败记录。请从原视频重新提交续接；系统不会自动重跑。';article.append(p)}
     if(job.status==='queued'&&!(['h3','h3-loop'].includes(job.mode)?(job.size==='3000x1000'?h3StageOnline:h3Online):job.mode==='volume-loop'?volumeOnline:job.mode==='loop'?loopOnline:workerOnline)){
@@ -135,6 +141,16 @@ function render(){
         actions.append(copy);
         const next=document.createElement('button');next.type='button';next.className='comfy-download';next.textContent='按原画面续接 ↗';next.onclick=()=>selectContinuation(job);if(!['h3','h3-loop'].includes(job.mode))actions.append(next);
       }
+      for(const index of job.nativeOutputs||[]){const native=document.createElement('a');native.href=BASE+'/tools/comfy/jobs/'+job.id+'/download-native/'+index;native.textContent='下载原生片段 '+(index+1)+' ↧';actions.append(native)}
+      if(job.originalAvailable){
+        const original=document.createElement('a');original.href=BASE+'/tools/comfy/jobs/'+job.id+'/download-original';original.textContent='下载处理前视频 ↧';actions.append(original);
+        const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='对比处理前视频';details.append(summary);details.addEventListener('toggle',()=>{if(details.open&&!details.querySelector('video'))details.append(player(BASE+'/tools/comfy/jobs/'+job.id+'/original'))});article.append(details);
+      }
+      if(job.archive){
+        const archive=document.createElement('a');archive.href=BASE+'/tools/comfy/jobs/'+job.id+'/archive';archive.textContent='下载参数 JSON ↧';actions.append(archive);
+        if(!job.sourceJobId){const reference=document.createElement('a');reference.href=BASE+'/tools/comfy/jobs/'+job.id+'/reference';reference.textContent='下载参考图 ↧';actions.append(reference)}
+      }
+      if(job.replayAvailable&&['h3','video'].includes(job.mode)){const replay=document.createElement('button');replay.type='button';replay.textContent='复制配置重新生成';replay.disabled=busy||!foundationOnline||jobs.some(j=>['queued','running'].includes(j.status));replay.onclick=async()=>{if(!confirm('使用已保存的参考图、提示词、种子、模型和输出修正设置重新生成？将占用GPU，结果不保证逐像素一致。'))return;busy=true;button();try{await api('/tools/comfy/jobs/'+job.id+'/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});notice='已按归档配置提交'}catch(e){notice=e.message}finally{busy=false;await refresh()}};actions.append(replay)}
       article.append(actions);
     }
     list.append(article);
@@ -144,11 +160,11 @@ async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
     const data=await api('/tools/comfy/jobs');$('workspace').hidden=false;$('login').hidden=true;$('restricted').hidden=true;
-    enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
+    foundationOnline=!!data.foundationOnline;enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
     jobs=Array.isArray(data.jobs)?data.jobs:[];
-    const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality]));
+    const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality,job.processing,job.archive,foundationOnline]));
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
-    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!activeWorker()?
+    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'工作进程正在更新任务归档能力，连接后会自动恢复':!activeWorker()?
       (['h3','h3-loop'].includes(currentMode())?'H3 工作进程未连接；请启动已部署 H3 的 5090 实例（实例1或实例3），工作进程连接后自动恢复。':currentMode()==='loop'?'Loop 渲染器未连接，实例开机后页面会自动恢复。':'GPU 当前未连接，开机后此页面会自动恢复。'):
       jobs.some(job=>['queued','running'].includes(job.status))?'视频正在生成，页面会自动更新。':'准备就绪'));
   }catch(error){
@@ -173,11 +189,12 @@ $('generate-form').onsubmit=async event=>{
   busy=true;notice='';button();status('正在提交…');
   try{
     if(continueFrom){
-      await api('/tools/comfy/jobs/'+continueFrom+'/continue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:$('duration').value})});
+      await api('/tools/comfy/jobs/'+continueFrom+'/continue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:$('duration').value,stabilize:$('stabilize').checked,colorLock:$('color-lock').checked})});
       $('cancel-continuation').click();
     }else{
       await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':file.type,
         'X-Comfy-Prompt':encodeURIComponent(prompt),'X-Comfy-Mode':mode,
+        'X-Comfy-Stabilize':String($('stabilize').checked),'X-Comfy-Color-Lock':String($('color-lock').checked),
         'X-Comfy-Size':$('size').value,'X-Comfy-Duration':$('duration').value},body:file});
     }
     notice='任务已提交，正在等待生成';status(notice);
