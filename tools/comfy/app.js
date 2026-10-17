@@ -121,6 +121,7 @@ function render(){
     }
     if(job.processing){const p=document.createElement('p');p.textContent=job.processing.status==='fallback'?'输出修正未完成，当前为处理前视频。':job.processing.status==='applied'?'已应用：'+[job.processing.stabilize?'轻度防抖':'',job.processing.colorLock?'固定色调':''].filter(Boolean).join('、'):'未启用输出修正 · 原始视频';article.append(p)}
     if(job.archive){const d=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent='查看生成参数与尺寸';pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify({workflows:job.archive.workflows.map(w=>({sha256:w.sha256,graph:w.graph})),output:job.archive.output,environment:job.archive.environment},null,2);d.append(summary,pre);article.append(d)}
+    if(job.archive&&!job.videoAvailable){const archive=document.createElement('a');archive.href=BASE+'/tools/comfy/jobs/'+job.id+'/archive';archive.textContent='下载已归档参数 JSON ↧';article.append(archive)}
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
     if(job.status==='failed'&&job.error?.startsWith('连续生成未通过视觉一致性检查')){const p=document.createElement('p');p.textContent='此为旧检查策略产生的失败记录。请从原视频重新提交续接；系统不会自动重跑。';article.append(p)}
     if(job.status==='queued'&&!(['h3','h3-loop'].includes(job.mode)?(job.size==='3000x1000'?h3StageOnline:h3Online):job.mode==='volume-loop'?volumeOnline:job.mode==='loop'?loopOnline:workerOnline)){
@@ -164,7 +165,7 @@ async function refresh(){
     jobs=Array.isArray(data.jobs)?data.jobs:[];
     const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality,job.processing,job.archive,foundationOnline]));
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
-    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'工作进程正在更新任务归档能力，连接后会自动恢复':!activeWorker()?
+    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'任务归档工作进程未连接，请启动已更新的5090实例3；连接后自动恢复':!activeWorker()?
       (['h3','h3-loop'].includes(currentMode())?'H3 工作进程未连接；请启动已部署 H3 的 5090 实例（实例1或实例3），工作进程连接后自动恢复。':currentMode()==='loop'?'Loop 渲染器未连接，实例开机后页面会自动恢复。':'GPU 当前未连接，开机后此页面会自动恢复。'):
       jobs.some(job=>['queued','running'].includes(job.status))?'视频正在生成，页面会自动更新。':'准备就绪'));
   }catch(error){
