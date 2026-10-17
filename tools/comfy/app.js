@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
 const $=id=>document.getElementById(id);
-let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false,foundationOnline=false,wan14bOnline=false;
+let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false,foundationOnline=false,wan14bOnline=false,loopTemplate1Online=false;
 let jobs=[],previewUrl=null,notice='',continueFrom=null;
 let lastRenderKey='';
 
@@ -36,18 +36,29 @@ $('copy-current-prompt').onclick=()=>{
 };
 function currentMode(){return continueFrom?'video':$('mode').value}
 function activeWorker(){return foundationOnline&&modelWorker()}
-function modelWorker(){if(currentMode()==='wan14b')return wan14bOnline;return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
+function modelWorker(){if(currentMode()==='wan14b')return wan14bOnline&&($('end-strategy').value!=='template1'||loopTemplate1Online);return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
 function button(){
   const blocked=jobs.some(job=>['queued','running'].includes(job.status));
   $('submit').disabled=busy||!enabled||!activeWorker()||blocked;
   $('submit').textContent=busy?'正在提交…':continueFrom?'按原画面续接 ↗':'生成视频 ↗';
 }
 function applyMode(){
+  const template1=currentMode()==='wan14b'&&$('end-strategy').value==='template1';$('template1-note').hidden=!template1;$('template1-motion').textContent='Locked-off camera. Preserve the reference composition, silhouette and palette. Gentle local swirling and small back-and-forth undulation, balanced motion without a dominant travel direction. Keep overall position, size and lighting stable. Smooth continuous motion, no pouring, falling, jets, global drift, camera movement, zoom or flashing.';
   const is14=currentMode()==='wan14b';
   $('end-controls').hidden=!is14;$('end-image-field').hidden=!is14||$('end-strategy').value!=='image';$('end-image').required=is14&&$('end-strategy').value==='image';
-  for(const option of $('size').options)option.disabled=is14&&option.value!=='480p';
-  for(const option of $('duration').options){option.hidden=option.value==='3s'&&!is14;option.disabled=is14&&option.value!=='3s'}
+  for(const option of $('size').options)option.disabled=is14&&!(template1?['480p','720p']:['480p']).includes(option.value);
+  for(const option of $('duration').options){option.hidden=option.value==='3s'&&(!is14||template1);option.disabled=is14&&!(template1?['5s','10s']:['3s']).includes(option.value)}
   if(!is14&&$('duration').value==='3s')$('duration').value='5s';
+  if(is14&&template1){
+    if(!['480p','720p'].includes($('size').value))$('size').value='720p';
+    if(!['5s','10s'].includes($('duration').value))$('duration').value='10s';
+    $('size').querySelector('[value="480p"]').textContent='640 × 384 · 模板预览';$('size').querySelector('[value="720p"]').textContent='1280 × 720 · 原生生成';
+    $('duration').querySelector('[value="5s"]').textContent='正向5秒 → 约10秒循环';$('duration').querySelector('[value="10s"]').textContent='正向10秒 → 约20秒循环';
+    $('model-hint').textContent='循环视频模板1 · 保持构图的局部往复运动；模板会追加下方可见的运动规则。';
+    $('form-note').textContent='原生约3秒运动段，经慢放与光流插帧形成正向段，再自动正倒放衔接。原生片段与正向段均保留；生成效果需预览确认。';
+    const dims=$('size').value==='720p'?'1280 × 720':'640 × 384';$('size-note').textContent='原生及导出尺寸：'+dims+'；交付30fps正倒放循环。';button();return;
+  }
+  $('duration').querySelector('[value="5s"]').textContent='约 5 秒';$('duration').querySelector('[value="10s"]').textContent='约 10 秒';
   if(is14){
     $('size').value='480p';$('size').querySelector('[value="480p"]').textContent='640 × 384 · 原生验证尺寸';$('duration').value='3s';
     $('reference-field').hidden=false;$('image').disabled=false;$('image').required=true;$('mode').disabled=false;
@@ -89,7 +100,7 @@ $('cancel-continuation').onclick=()=>{
   $('image-preview').textContent='选择一张图，作为视频的起始画面';applyMode();
 };
 $('mode').onchange=applyMode;
-$('size').onchange=applyMode;$('end-strategy').onchange=applyMode;
+$('size').onchange=applyMode;$('end-strategy').onchange=()=>{if($('end-strategy').value==='template1'){$('size').value='720p';$('duration').value='10s'}applyMode()};
 
 function clock(seconds){
   if(!Number.isFinite(seconds))return '0:00';
@@ -122,8 +133,8 @@ function render(){
     head.className='comfy-job-head';title.textContent=job.prompt.length>45?job.prompt.slice(0,45)+'…':job.prompt;
     badge.textContent={queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status;
     head.append(title,badge);article.append(head);
-    const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN')+' · '+(job.size||'480p')+' · '+(job.duration||'2s')+(['loop','volume-loop'].includes(job.mode)?' · 视觉循环':'');article.append(time);
-    if(job.mode==='wan14b'){const p=document.createElement('p');p.textContent='Wan 2.2 14B · '+({none:'单首帧',image:'首尾帧',same:'循环候选（需验收）'}[job.endStrategy||'none'])+' · 原生640×384 · '+(job.generation?'种子 '+job.generation.seed+' · 20步':'');article.append(p)}
+    const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN')+' · '+(job.size||'480p')+' · '+(job.endStrategy==='template1'?'正向':'')+(job.duration||'2s')+(['loop','volume-loop'].includes(job.mode)?' · 视觉循环':'');article.append(time);
+    if(job.mode==='wan14b'){const p=document.createElement('p');p.textContent='Wan 2.2 14B · '+({none:'单首帧',image:'首尾帧',same:'循环候选（需验收）',template1:'循环模板1 · 正倒放衔接'}[job.endStrategy||'none'])+' · 原生'+(job.generation?.nativeSize?.join('×')||'640×384')+' · '+(job.generation?'种子 '+job.generation.seed+' · 20步':'');article.append(p)}
     if(['h3','h3-loop'].includes(job.mode)){const p=document.createElement('p');p.textContent=(job.mode==='h3-loop'?'H3 循环候选 · 尚需预览确认接缝':'H3 参考图视频')+(job.generation?' · 种子 '+job.generation.seed+' · '+job.generation.steps+' 步':'');article.append(p)}
     if(['strict','advisory'].includes(job.continuity)){
       const p=document.createElement('p'),reports=job.quality||[],warnings=reports.filter(item=>item.accepted===false);
@@ -132,7 +143,8 @@ function render(){
     }else if(['loop','volume-loop'].includes(job.mode)){
       const p=document.createElement('p');p.textContent='历史周期算法作品 · 请预览确认效果';article.append(p);
     }
-    if(job.processing){const p=document.createElement('p');p.textContent=job.processing.status==='fallback'?'输出修正未完成，当前为处理前视频。':job.processing.status==='applied'?'已应用：'+[job.processing.stabilize?'轻度防抖':'',job.processing.colorLock?'固定色调':''].filter(Boolean).join('、'):'未启用输出修正 · 原始视频';article.append(p)}
+    if(job.processing){const p=document.createElement('p');p.textContent=job.processing.version==='loop-template1-v1'?'循环模板1 · 正向'+job.processing.cycle.forwardSeconds+'秒 · 循环'+job.processing.cycle.duration.toFixed(2)+'秒 · 30fps':job.processing.status==='fallback'?'输出修正未完成，当前为处理前视频。':job.processing.status==='applied'?'已应用：'+[job.processing.stabilize?'轻度防抖':'',job.processing.colorLock?'固定色调':''].filter(Boolean).join('、'):'未启用输出修正 · 原始视频';article.append(p)}
+    if(job.processing?.optionalControls?.status==='fallback'){const warning=document.createElement('p');warning.textContent='可选防抖或色调修正未完成，循环片使用修正前的正向片段制作。';article.append(warning)}
     if(job.archive){const d=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent='查看生成参数与尺寸';pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify({workflows:job.archive.workflows.map(w=>({sha256:w.sha256,graph:w.graph})),output:job.archive.output,environment:job.archive.environment},null,2);d.append(summary,pre);article.append(d)}
     if(job.archive&&!job.videoAvailable){const archive=document.createElement('a');archive.href=BASE+'/tools/comfy/jobs/'+job.id+'/archive';archive.textContent='下载已归档参数 JSON ↧';article.append(archive)}
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
@@ -141,7 +153,7 @@ function render(){
       const p=document.createElement('p');p.textContent=['h3','h3-loop'].includes(job.mode)?'H3 工作进程未连接，请启动已部署 H3 的 5090 实例（实例1或实例3）。':job.mode==='loop'?'Loop 渲染器未连接，实例开机后会继续处理。':'GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p);
     }
     if(job.videoAvailable){
-      const url=BASE+'/tools/comfy/jobs/'+job.id+'/video';article.append(player(url,['loop','volume-loop','h3-loop'].includes(job.mode)));
+      const url=BASE+'/tools/comfy/jobs/'+job.id+'/video';article.append(player(url,['loop','volume-loop','h3-loop'].includes(job.mode)||job.endStrategy==='template1'));
       const actions=document.createElement('div');actions.className='comfy-actions';
       const download=document.createElement('a');download.className='comfy-download';download.href=BASE+'/tools/comfy/jobs/'+job.id+'/download';download.textContent='下载 MP4 ↧';actions.append(download);
       if(!['loop','volume-loop'].includes(job.mode)){
@@ -157,11 +169,11 @@ function render(){
       }
       for(const index of job.nativeOutputs||[]){const native=document.createElement('a');native.href=BASE+'/tools/comfy/jobs/'+job.id+'/download-native/'+index;native.textContent='下载原生片段 '+(index+1)+' ↧';actions.append(native)}
       if(job.originalAvailable){
-        const original=document.createElement('a');original.href=BASE+'/tools/comfy/jobs/'+job.id+'/download-original';original.textContent='下载处理前视频 ↧';actions.append(original);
+        const original=document.createElement('a');original.href=BASE+'/tools/comfy/jobs/'+job.id+'/download-original';original.textContent=job.endStrategy==='template1'?'下载正向片段（修正前） ↧':'下载处理前视频 ↧';actions.append(original);
         const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='对比处理前视频';details.append(summary);details.addEventListener('toggle',()=>{if(details.open&&!details.querySelector('video'))details.append(player(BASE+'/tools/comfy/jobs/'+job.id+'/original'))});article.append(details);
       }
       if(job.archive){
-        if(job.endStrategy&&job.endStrategy!=='none'){const end=document.createElement('a');end.href=BASE+'/tools/comfy/jobs/'+job.id+'/end-reference';end.textContent='下载结束画面 ↧';actions.append(end)}
+        if(['image','same'].includes(job.endStrategy)){const end=document.createElement('a');end.href=BASE+'/tools/comfy/jobs/'+job.id+'/end-reference';end.textContent='下载结束画面 ↧';actions.append(end)}
         const archive=document.createElement('a');archive.href=BASE+'/tools/comfy/jobs/'+job.id+'/archive';archive.textContent='下载参数 JSON ↧';actions.append(archive);
         if(!job.sourceJobId){const reference=document.createElement('a');reference.href=BASE+'/tools/comfy/jobs/'+job.id+'/reference';reference.textContent='下载参考图 ↧';actions.append(reference)}
       }
@@ -175,11 +187,11 @@ async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
     const data=await api('/tools/comfy/jobs');$('workspace').hidden=false;$('login').hidden=true;$('restricted').hidden=true;
-    wan14bOnline=!!data.wan14bOnline;foundationOnline=!!data.foundationOnline;enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
+    loopTemplate1Online=!!data.loopTemplate1Online;wan14bOnline=!!data.wan14bOnline;foundationOnline=!!data.foundationOnline;enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
     jobs=Array.isArray(data.jobs)?data.jobs:[];
-    const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality,job.processing,job.archive,foundationOnline]));
+    const renderKey=JSON.stringify([loopTemplate1Online,jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality,job.processing,job.archive,foundationOnline])]);
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
-    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'任务归档工作进程未连接，请启动已更新的5090实例3；连接后自动恢复':currentMode()==='wan14b'&&!wan14bOnline?'14B工作进程未连接；请启动已部署14B模型的实例3':!activeWorker()?
+    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'任务归档工作进程未连接，请启动已更新的5090实例3；连接后自动恢复':currentMode()==='wan14b'&&!wan14bOnline?'14B工作进程未连接；请启动已部署14B模型的实例3':currentMode()==='wan14b'&&$('end-strategy').value==='template1'&&!loopTemplate1Online?'模板1工作进程未连接，连接后自动恢复':!activeWorker()?
       (['h3','h3-loop'].includes(currentMode())?'H3 工作进程未连接；请启动已部署 H3 的 5090 实例（实例1或实例3），工作进程连接后自动恢复。':currentMode()==='loop'?'Loop 渲染器未连接，实例开机后页面会自动恢复。':'GPU 当前未连接，开机后此页面会自动恢复。'):
       jobs.some(job=>['queued','running'].includes(job.status))?'视频正在生成，页面会自动更新。':'准备就绪'));
   }catch(error){
