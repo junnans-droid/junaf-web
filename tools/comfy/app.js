@@ -12,7 +12,7 @@ async function api(path,options={}){
     const data=await response.json().catch(()=>({}));
     if(!response.ok){const error=Error(data.message||`请求失败 (${response.status})`);error.status=response.status;throw error}
     return data;
-  }catch(error){if(error.name==='AbortError')throw Error('连接超时，请稍后重试');throw error}
+  }catch(error){if(error.name==='AbortError')throw Error('连接超时，请稍后重试');if(error instanceof TypeError)throw Error('无法连接JUNAF服务，请检查网络后重试');throw error}
   finally{clearTimeout(timeout)}
 }
 function status(message){$('status').textContent=message}
@@ -39,31 +39,26 @@ function activeWorker(){return ['h3','h3-loop'].includes(currentMode())?($('size
 function button(){
   const blocked=jobs.some(job=>['queued','running'].includes(job.status));
   $('submit').disabled=busy||!enabled||!activeWorker()||blocked;
-  $('submit').textContent=busy?'正在提交…':continueFrom?'按原画面续接 ↗':currentMode()==='h3-loop'?'生成 AI 循环候选 ↗':currentMode()==='volume-loop'?'生成视觉循环 ↗':currentMode()==='loop'?'生成参考图循环 ↗':'生成视频 ↗';
+  $('submit').textContent=busy?'正在提交…':continueFrom?'按原画面续接 ↗':'生成视频 ↗';
 }
 function applyMode(){
-  const h3=['h3','h3-loop'].includes(currentMode());
-  const volume=currentMode()==='volume-loop',looping=['loop','volume-loop'].includes(currentMode());
-  $('reference-field').hidden=volume;$('image').required=!volume&&!continueFrom;$('image').disabled=volume||!!continueFrom;
-  $('density-field').hidden=!volume;
-  $('loop-hint').textContent=volume?'独立的程序化体积烟雾场景，无需上传参考图。烟雾持续向下，底部向外扩散；洞内雾量可调。当前周期为 8 秒，可重复播放延长。使用 GPU 光线步进与周期密度场，不使用倒放或首尾淡化，也不是 AI 扩散生成。':'保持参考图中的构图，用周期纹理产生运动。此模式使用确定性算法，不解析文字描述。';
-  $('loop-hint').hidden=!looping;$('prompt-field').hidden=looping;$('prompt').required=!looping;
-  $('duration-field').hidden=looping;$('speed-field').hidden=!looping;
-  $('duration').querySelector('[value="2s"]').disabled=h3;
-  const stageOption=$('size').querySelector('[value="3000x1000"]');stageOption.disabled=!h3;stageOption.hidden=!h3;
+  const h3=currentMode()==='h3',stage=$('size').querySelector('[value="3000x1000"]');
+  stage.disabled=!h3;stage.hidden=!h3;
   if(!h3&&$('size').value==='3000x1000')$('size').value='480p';
   const hd=h3&&!['480p','3000x1000'].includes($('size').value);
+  $('reference-field').hidden=false;$('image').required=!continueFrom;$('image').disabled=!!continueFrom;
+  $('prompt-field').hidden=false;$('prompt').required=true;
+  $('duration').querySelector('[value="2s"]').disabled=h3;
   $('duration').querySelector('[value="10s"]').disabled=hd;
-  $('duration').querySelector('[value="10s"]').textContent=h3?'约 10 秒':'约 10 秒 · 分段续接';
-  $('size').querySelector('[value="720p"]').textContent=h3?'1344 × 768 · H3 原生高清':'720p · 高清画面';
-  $('size').querySelector('[value="1080p"]').textContent=h3?'1920 × 1080 · 从 768p 放大':'1920 × 1080 · 高画质';
-  if(h3&&(['2s','8s'].includes($('duration').value)||hd&&$('duration').value==='10s'))$('duration').value='5s';
+  $('duration').querySelector('[value="10s"]').textContent=h3?'约 10 秒':'约 10 秒 · 两段续接';
+  if(h3&&($('duration').value==='2s'||hd&&$('duration').value==='10s'))$('duration').value='5s';
+  $('size').querySelector('[value="480p"]').textContent='832 × 480 · 快速预览';
+  $('size').querySelector('[value="720p"]').textContent=h3?'1344 × 768 · 原生高清':'1280 × 704 · 原生高清';
+  $('size').querySelector('[value="1080p"]').textContent=h3?'1920 × 1080 · 从 768p 放大':'1920 × 1080 · 从 1088 高画面裁切';
   $('mode').disabled=!!continueFrom;
-  if(looping)$('duration').value=volume?'8s':'10s';
-  else if($('duration').value==='8s')$('duration').value='5s';
-  $('form-note').textContent=volume?'视觉循环用于舞台、秀场和装置背景；与长视频片段续接独立。周期状态闭合后仍需预览确认艺术效果。':looping?'固定 10 秒、24 帧/秒。烟雾向下流动并在底部扩散；首尾帧接缝经编码后再次校验。':'每次只处理一个任务。续接自动沿用原提示词、画面尺寸与上一段尾帧；像素检查不等于风格验收，完成后请预览确认。';
-  if(h3)$('form-note').textContent=currentMode()==='h3-loop'?'烟雾运动模板：参考图等比放入画布，以多帧引导向下流动、底部向两侧扩散，并约束首尾画面，再搜索自然循环切点；不倒放、不淡化。结果仍需预览，不能保证每次都无缝。裁切后时长可能略短。高清首版约 5 秒。':'H3 以参考图约束起始画面，支持约 5 秒或 10 秒。高清首版开放约 5 秒；1080p 为放大输出。参数与随机种子会记录到作品。';
-  if(h3&&$('size').value==='3000x1000')$('form-note').textContent='3:1 舞台宽屏：原生 1248×416，放大交付 3000×1000，支持约 5 秒或 10 秒。参考图请用 3:1 构图，其他比例会等比留边。循环模式仍需预览接缝。';
+  $('model-hint').textContent=h3?'MiniMax H3 FL2VA · 参考图＋提示词。原生图像转视频，支持约 5 秒或 10 秒；当前未开放尾帧续接。':'Wan 2.2 TI2V 5B · 参考图＋提示词。支持约 2 秒、5 秒或两段续接约 10 秒；已有作品可继续使用尾帧续接。';
+  $('form-note').textContent=h3?'高清与1080p当前开放约5秒。1080p为放大输出；参考图按比例留边。提示词原样传给模型，生成效果请预览后自行判断。':'参考图与提示词共同控制画面。续接会沿用原提示词和尺寸；一致性检查不能代替视觉验收。';
+  if(h3&&$('size').value==='3000x1000')$('form-note').textContent='3:1 舞台宽屏：原生1248×416，放大交付3000×1000，支持约5秒或10秒。建议上传3:1参考图；其他比例会等比留边。';
   button();
 }
 function selectContinuation(job){
@@ -170,20 +165,19 @@ $('image').addEventListener('change',()=>{
 $('generate-form').onsubmit=async event=>{
   event.preventDefault();if(busy||!enabled||!activeWorker())return;
   const file=$('image').files[0],prompt=$('prompt').value.trim(),mode=currentMode();
-  if(mode!=='volume-loop'&&!continueFrom&&(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024)){
-    notice='请选择 10 MB 以下的 PNG、JPG 或 WebP 图片';status(notice);return;
+  if(!continueFrom&&(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024)){
+    notice='请选择10 MB以下的PNG、JPG或WebP参考图';status(notice);return;
   }
-  if(['video','h3','h3-loop'].includes(mode)&&prompt.length<8){notice='动态描述至少填写 8 个字符';status(notice);return}
+  if(prompt.length<8){notice='提示词至少填写8个字符';status(notice);return}
   busy=true;notice='';button();status('正在提交…');
   try{
     if(continueFrom){
       await api('/tools/comfy/jobs/'+continueFrom+'/continue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:$('duration').value})});
       $('cancel-continuation').click();
     }else{
-      await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':mode==='volume-loop'?'application/octet-stream':file.type,
-        'X-Comfy-Prompt':encodeURIComponent(mode==='volume-loop'?'周期体积烟雾':mode==='loop'?'向下流动的烟雾视觉 Loop':prompt),
-        'X-Comfy-Mode':mode,'X-Comfy-Speed':$('speed').value,'X-Comfy-Density':$('density').value,
-        'X-Comfy-Size':$('size').value,'X-Comfy-Duration':mode==='volume-loop'?'8s':mode==='loop'?'10s':$('duration').value},body:mode==='volume-loop'?new Uint8Array(0):file});
+      await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':file.type,
+        'X-Comfy-Prompt':encodeURIComponent(prompt),'X-Comfy-Mode':mode,
+        'X-Comfy-Size':$('size').value,'X-Comfy-Duration':$('duration').value},body:file});
     }
     notice='任务已提交，正在等待生成';status(notice);
   }catch(error){notice=error.message;status(notice)}
