@@ -108,14 +108,15 @@ function render(){
     head.append(title,badge);article.append(head);
     const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN')+' · '+(job.size||'480p')+' · '+(job.duration||'2s')+(['loop','volume-loop'].includes(job.mode)?' · 视觉循环':'');article.append(time);
     if(['h3','h3-loop'].includes(job.mode)){const p=document.createElement('p');p.textContent=(job.mode==='h3-loop'?'H3 循环候选 · 尚需预览确认接缝':'H3 参考图视频')+(job.generation?' · 种子 '+job.generation.seed+' · '+job.generation.steps+' 步':'');article.append(p)}
-    if(job.continuity==='strict'||['loop','volume-loop'].includes(job.mode)){
-      const quality=document.createElement('p');
-      quality.textContent=job.status==='completed'&&job.quality?.length?
-        (job.mode==='volume-loop'?'周期边界检查通过 · 请预览确认运动和质感':job.mode==='loop'?'已通过首尾接缝检查 · 灰度差 '+job.quality[0].loopSeamMae:'已通过基础接缝与明暗检查 · 风格和运动仍需预览确认'):
-        (job.mode==='volume-loop'?'体积密度场与运动状态周期闭合 · 无倒放':job.mode==='loop'?'10 秒周期流动 · 生成后检查首尾接缝':'尾帧续接 · 自动沿用原提示词与画面尺寸');
-      article.append(quality);
+    if(['strict','advisory'].includes(job.continuity)){
+      const p=document.createElement('p'),reports=job.quality||[],warnings=reports.filter(item=>item.accepted===false);
+      p.textContent=job.status==='completed'?(warnings.length?'续接视频已生成 · 检测到画面或明暗变化，请预览判断':'续接视频已生成 · 请预览确认衔接与风格'):'尾帧续接 · 自动沿用原提示词与画面尺寸';article.append(p);
+      if(warnings.length){const details=document.createElement('details'),summary=document.createElement('summary'),text=document.createElement('p');summary.textContent='查看参考指标提示';text.textContent=[...new Set(warnings.flatMap(item=>item.reasons||[]))].join('；')+'。这些是画面差异指标，不代表视觉效果合格或不合格。';details.append(summary,text);article.append(details)}
+    }else if(['loop','volume-loop'].includes(job.mode)){
+      const p=document.createElement('p');p.textContent='历史周期算法作品 · 请预览确认效果';article.append(p);
     }
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
+    if(job.status==='failed'&&job.error?.startsWith('连续生成未通过视觉一致性检查')){const p=document.createElement('p');p.textContent='此为旧检查策略产生的失败记录。请从原视频重新提交续接；系统不会自动重跑。';article.append(p)}
     if(job.status==='queued'&&!(['h3','h3-loop'].includes(job.mode)?(job.size==='3000x1000'?h3StageOnline:h3Online):job.mode==='volume-loop'?volumeOnline:job.mode==='loop'?loopOnline:workerOnline)){
       const p=document.createElement('p');p.textContent=['h3','h3-loop'].includes(job.mode)?'H3 工作进程未连接，请启动已部署 H3 的 5090 实例（实例1或实例3）。':job.mode==='loop'?'Loop 渲染器未连接，实例开机后会继续处理。':'GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p);
     }
