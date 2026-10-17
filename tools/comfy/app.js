@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
 const $=id=>document.getElementById(id);
-let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false,foundationOnline=false;
+let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false,foundationOnline=false,wan14bOnline=false;
 let jobs=[],previewUrl=null,notice='',continueFrom=null;
 let lastRenderKey='';
 
@@ -36,13 +36,25 @@ $('copy-current-prompt').onclick=()=>{
 };
 function currentMode(){return continueFrom?'video':$('mode').value}
 function activeWorker(){return foundationOnline&&modelWorker()}
-function modelWorker(){return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
+function modelWorker(){if(currentMode()==='wan14b')return wan14bOnline;return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
 function button(){
   const blocked=jobs.some(job=>['queued','running'].includes(job.status));
   $('submit').disabled=busy||!enabled||!activeWorker()||blocked;
   $('submit').textContent=busy?'正在提交…':continueFrom?'按原画面续接 ↗':'生成视频 ↗';
 }
 function applyMode(){
+  const is14=currentMode()==='wan14b';
+  $('end-controls').hidden=!is14;$('end-image-field').hidden=!is14||$('end-strategy').value!=='image';$('end-image').required=is14&&$('end-strategy').value==='image';
+  for(const option of $('size').options)option.disabled=is14&&option.value!=='480p';
+  for(const option of $('duration').options){option.hidden=option.value==='3s'&&!is14;option.disabled=is14&&option.value!=='3s'}
+  if(!is14&&$('duration').value==='3s')$('duration').value='5s';
+  if(is14){
+    $('size').value='480p';$('size').querySelector('[value="480p"]').textContent='640 × 384 · 原生验证尺寸';$('duration').value='3s';
+    $('reference-field').hidden=false;$('image').disabled=false;$('image').required=true;$('mode').disabled=false;
+    $('model-hint').textContent='Wan 2.2 I2V A14B FP8 · 官方标准20步采样，支持单首帧或首尾帧约束。验证阶段仅开放约3秒短片。';
+    $('form-note').textContent='本入口用于对照验证。相同首尾图只生成循环候选，不保证接缝运动连续；防抖和色调修正可单独选择。';
+    $('size-note').textContent='原生生成：640 × 384；导出：640 × 384；49帧 / 16fps（约3.06秒）。';button();return;
+  }
   const h3=currentMode()==='h3',stage=$('size').querySelector('[value="3000x1000"]');
   stage.disabled=!h3;stage.hidden=!h3;
   if(!h3&&$('size').value==='3000x1000')$('size').value='480p';
@@ -77,7 +89,7 @@ $('cancel-continuation').onclick=()=>{
   $('image-preview').textContent='选择一张图，作为视频的起始画面';applyMode();
 };
 $('mode').onchange=applyMode;
-$('size').onchange=applyMode;
+$('size').onchange=applyMode;$('end-strategy').onchange=applyMode;
 
 function clock(seconds){
   if(!Number.isFinite(seconds))return '0:00';
@@ -111,6 +123,7 @@ function render(){
     badge.textContent={queued:'等待中',running:'生成中',completed:'已完成',failed:'失败'}[job.status]||job.status;
     head.append(title,badge);article.append(head);
     const time=document.createElement('time');time.textContent=new Date(job.createdAt).toLocaleString('zh-CN')+' · '+(job.size||'480p')+' · '+(job.duration||'2s')+(['loop','volume-loop'].includes(job.mode)?' · 视觉循环':'');article.append(time);
+    if(job.mode==='wan14b'){const p=document.createElement('p');p.textContent='Wan 2.2 14B · '+({none:'单首帧',image:'首尾帧',same:'循环候选（需验收）'}[job.endStrategy||'none'])+' · 原生640×384 · '+(job.generation?'种子 '+job.generation.seed+' · 20步':'');article.append(p)}
     if(['h3','h3-loop'].includes(job.mode)){const p=document.createElement('p');p.textContent=(job.mode==='h3-loop'?'H3 循环候选 · 尚需预览确认接缝':'H3 参考图视频')+(job.generation?' · 种子 '+job.generation.seed+' · '+job.generation.steps+' 步':'');article.append(p)}
     if(['strict','advisory'].includes(job.continuity)){
       const p=document.createElement('p'),reports=job.quality||[],warnings=reports.filter(item=>item.accepted===false);
@@ -140,7 +153,7 @@ function render(){
         const copy=document.createElement('button');copy.type='button';copy.textContent='复制提示词';
         copy.onclick=()=>copyPrompt(job.prompt,copy,{set hidden(value){promptDetails.open=!value},focus:()=>promptText.focus(),select:()=>promptText.select()});
         actions.append(copy);
-        const next=document.createElement('button');next.type='button';next.className='comfy-download';next.textContent='按原画面续接 ↗';next.onclick=()=>selectContinuation(job);if(!['h3','h3-loop'].includes(job.mode))actions.append(next);
+        const next=document.createElement('button');next.type='button';next.className='comfy-download';next.textContent='按原画面续接 ↗';next.onclick=()=>selectContinuation(job);if(!['h3','h3-loop','wan14b'].includes(job.mode))actions.append(next);
       }
       for(const index of job.nativeOutputs||[]){const native=document.createElement('a');native.href=BASE+'/tools/comfy/jobs/'+job.id+'/download-native/'+index;native.textContent='下载原生片段 '+(index+1)+' ↧';actions.append(native)}
       if(job.originalAvailable){
@@ -148,10 +161,11 @@ function render(){
         const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='对比处理前视频';details.append(summary);details.addEventListener('toggle',()=>{if(details.open&&!details.querySelector('video'))details.append(player(BASE+'/tools/comfy/jobs/'+job.id+'/original'))});article.append(details);
       }
       if(job.archive){
+        if(job.endStrategy&&job.endStrategy!=='none'){const end=document.createElement('a');end.href=BASE+'/tools/comfy/jobs/'+job.id+'/end-reference';end.textContent='下载结束画面 ↧';actions.append(end)}
         const archive=document.createElement('a');archive.href=BASE+'/tools/comfy/jobs/'+job.id+'/archive';archive.textContent='下载参数 JSON ↧';actions.append(archive);
         if(!job.sourceJobId){const reference=document.createElement('a');reference.href=BASE+'/tools/comfy/jobs/'+job.id+'/reference';reference.textContent='下载参考图 ↧';actions.append(reference)}
       }
-      if(job.replayAvailable&&['h3','video'].includes(job.mode)){const replay=document.createElement('button');replay.type='button';replay.textContent='复制配置重新生成';replay.disabled=busy||!foundationOnline||jobs.some(j=>['queued','running'].includes(j.status));replay.onclick=async()=>{if(!confirm('使用已保存的参考图、提示词、种子、模型和输出修正设置重新生成？将占用GPU，结果不保证逐像素一致。'))return;busy=true;button();try{await api('/tools/comfy/jobs/'+job.id+'/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});notice='已按归档配置提交'}catch(e){notice=e.message}finally{busy=false;await refresh()}};actions.append(replay)}
+      if(job.replayAvailable&&['h3','video','wan14b'].includes(job.mode)){const replay=document.createElement('button');replay.type='button';replay.textContent='复制配置重新生成';replay.disabled=busy||!foundationOnline||jobs.some(j=>['queued','running'].includes(j.status));replay.onclick=async()=>{if(!confirm('使用已保存的参考图、提示词、种子、模型和输出修正设置重新生成？将占用GPU，结果不保证逐像素一致。'))return;busy=true;button();try{await api('/tools/comfy/jobs/'+job.id+'/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});notice='已按归档配置提交'}catch(e){notice=e.message}finally{busy=false;await refresh()}};actions.append(replay)}
       article.append(actions);
     }
     list.append(article);
@@ -161,11 +175,11 @@ async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
     const data=await api('/tools/comfy/jobs');$('workspace').hidden=false;$('login').hidden=true;$('restricted').hidden=true;
-    foundationOnline=!!data.foundationOnline;enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
+    wan14bOnline=!!data.wan14bOnline;foundationOnline=!!data.foundationOnline;enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
     jobs=Array.isArray(data.jobs)?data.jobs:[];
     const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality,job.processing,job.archive,foundationOnline]));
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
-    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'任务归档工作进程未连接，请启动已更新的5090实例3；连接后自动恢复':!activeWorker()?
+    if(!busy)status(notice||(!enabled?'视觉实验正在接入服务，暂不能提交':!foundationOnline?'任务归档工作进程未连接，请启动已更新的5090实例3；连接后自动恢复':currentMode()==='wan14b'&&!wan14bOnline?'14B工作进程未连接；请启动已部署14B模型的实例3':!activeWorker()?
       (['h3','h3-loop'].includes(currentMode())?'H3 工作进程未连接；请启动已部署 H3 的 5090 实例（实例1或实例3），工作进程连接后自动恢复。':currentMode()==='loop'?'Loop 渲染器未连接，实例开机后页面会自动恢复。':'GPU 当前未连接，开机后此页面会自动恢复。'):
       jobs.some(job=>['queued','running'].includes(job.status))?'视频正在生成，页面会自动更新。':'准备就绪'));
   }catch(error){
@@ -187,16 +201,20 @@ $('generate-form').onsubmit=async event=>{
     notice='请选择10 MB以下的PNG、JPG或WebP参考图';status(notice);return;
   }
   if(prompt.length<8){notice='提示词至少填写8个字符';status(notice);return}
+  const endFile=$('end-image').files[0];
+  if(mode==='wan14b'&&$('end-strategy').value==='image'&&(!endFile||!['image/png','image/jpeg','image/webp'].includes(endFile.type)||endFile.size>10*1024*1024)){notice='请选择10 MB以下的结束画面';status(notice);return}
   busy=true;notice='';button();status('正在提交…');
   try{
     if(continueFrom){
       await api('/tools/comfy/jobs/'+continueFrom+'/continue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:$('duration').value,stabilize:$('stabilize').checked,colorLock:$('color-lock').checked})});
       $('cancel-continuation').click();
     }else{
-      await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':file.type,
+      const base64=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file)});
+      const payload=mode==='wan14b'?JSON.stringify({image:await base64(file),endStrategy:$('end-strategy').value,endImage:$('end-strategy').value==='image'?await base64(endFile):null}):file;
+      await api('/tools/comfy/jobs',{method:'POST',headers:{'Content-Type':mode==='wan14b'?'application/json':file.type,
         'X-Comfy-Prompt':encodeURIComponent(prompt),'X-Comfy-Mode':mode,
         'X-Comfy-Stabilize':String($('stabilize').checked),'X-Comfy-Color-Lock':String($('color-lock').checked),
-        'X-Comfy-Size':$('size').value,'X-Comfy-Duration':$('duration').value},body:file});
+        'X-Comfy-Size':$('size').value,'X-Comfy-Duration':$('duration').value},body:payload});
     }
     notice='任务已提交，正在等待生成';status(notice);
   }catch(error){notice=error.message;status(notice)}
