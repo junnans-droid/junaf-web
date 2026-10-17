@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const BASE=['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:3100/api':'https://api.junaf.com/api';
 const $=id=>document.getElementById(id);
-let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false;
+let busy=false,refreshing=false,enabled=false,workerOnline=false,loopOnline=false,volumeOnline=false,h3Online=false,h3StageOnline=false;
 let jobs=[],previewUrl=null,notice='',continueFrom=null;
 let lastRenderKey='';
 
@@ -35,7 +35,7 @@ $('copy-current-prompt').onclick=()=>{
   copyPrompt(text,$('copy-current-prompt'),$('prompt'));
 };
 function currentMode(){return continueFrom?'video':$('mode').value}
-function activeWorker(){return ['h3','h3-loop'].includes(currentMode())?h3Online:currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
+function activeWorker(){return ['h3','h3-loop'].includes(currentMode())?($('size').value==='3000x1000'?h3StageOnline:h3Online):currentMode()==='volume-loop'?volumeOnline:currentMode()==='loop'?loopOnline:workerOnline}
 function button(){
   const blocked=jobs.some(job=>['queued','running'].includes(job.status));
   $('submit').disabled=busy||!enabled||!activeWorker()||blocked;
@@ -50,7 +50,9 @@ function applyMode(){
   $('loop-hint').hidden=!looping;$('prompt-field').hidden=looping;$('prompt').required=!looping;
   $('duration-field').hidden=looping;$('speed-field').hidden=!looping;
   $('duration').querySelector('[value="2s"]').disabled=h3;
-  const hd=h3&&$('size').value!=='480p';
+  const stageOption=$('size').querySelector('[value="3000x1000"]');stageOption.disabled=!h3;stageOption.hidden=!h3;
+  if(!h3&&$('size').value==='3000x1000')$('size').value='480p';
+  const hd=h3&&!['480p','3000x1000'].includes($('size').value);
   $('duration').querySelector('[value="10s"]').disabled=hd;
   $('duration').querySelector('[value="10s"]').textContent=h3?'约 10 秒':'约 10 秒 · 分段续接';
   $('size').querySelector('[value="720p"]').textContent=h3?'1344 × 768 · H3 原生高清':'720p · 高清画面';
@@ -61,6 +63,7 @@ function applyMode(){
   else if($('duration').value==='8s')$('duration').value='5s';
   $('form-note').textContent=volume?'视觉循环用于舞台、秀场和装置背景；与长视频片段续接独立。周期状态闭合后仍需预览确认艺术效果。':looping?'固定 10 秒、24 帧/秒。烟雾向下流动并在底部扩散；首尾帧接缝经编码后再次校验。':'每次只处理一个任务。续接自动沿用原提示词、画面尺寸与上一段尾帧；像素检查不等于风格验收，完成后请预览确认。';
   if(h3)$('form-note').textContent=currentMode()==='h3-loop'?'烟雾运动模板：参考图等比放入画布，以多帧引导向下流动、底部向两侧扩散，并约束首尾画面，再搜索自然循环切点；不倒放、不淡化。结果仍需预览，不能保证每次都无缝。裁切后时长可能略短。高清首版约 5 秒。':'H3 以参考图约束起始画面，支持约 5 秒或 10 秒。高清首版开放约 5 秒；1080p 为放大输出。参数与随机种子会记录到作品。';
+  if(h3&&$('size').value==='3000x1000')$('form-note').textContent='3:1 舞台宽屏：原生 1248×416，放大交付 3000×1000，支持约 5 秒或 10 秒。参考图请用 3:1 构图，其他比例会等比留边。循环模式仍需预览接缝。';
   button();
 }
 function selectContinuation(job){
@@ -118,7 +121,7 @@ function render(){
       article.append(quality);
     }
     if(job.error){const p=document.createElement('p');p.textContent=job.error;article.append(p)}
-    if(job.status==='queued'&&!(['h3','h3-loop'].includes(job.mode)?h3Online:job.mode==='volume-loop'?volumeOnline:job.mode==='loop'?loopOnline:workerOnline)){
+    if(job.status==='queued'&&!(['h3','h3-loop'].includes(job.mode)?(job.size==='3000x1000'?h3StageOnline:h3Online):job.mode==='volume-loop'?volumeOnline:job.mode==='loop'?loopOnline:workerOnline)){
       const p=document.createElement('p');p.textContent=['h3','h3-loop'].includes(job.mode)?'H3 工作进程未连接，请启动已部署 H3 的 5090 实例（实例1或实例3）。':job.mode==='loop'?'Loop 渲染器未连接，实例开机后会继续处理。':'GPU 未连接，开机并启动工作进程后会继续处理。';article.append(p);
     }
     if(job.videoAvailable){
@@ -145,7 +148,7 @@ async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
     const data=await api('/tools/comfy/jobs');$('workspace').hidden=false;$('login').hidden=true;$('restricted').hidden=true;
-    enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;
+    enabled=!!data.enabled;workerOnline=!!data.workerOnline;loopOnline=!!data.loopOnline;volumeOnline=!!data.volumeOnline;h3Online=!!data.h3Online;h3StageOnline=!!data.h3StageOnline;
     jobs=Array.isArray(data.jobs)?data.jobs:[];
     const renderKey=JSON.stringify(jobs.map(job=>[job.id,job.status,job.error,job.videoAvailable,job.quality]));
     if(renderKey!==lastRenderKey){render();lastRenderKey=renderKey}
