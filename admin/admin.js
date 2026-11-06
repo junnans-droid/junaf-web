@@ -136,7 +136,7 @@
         instructions:instructions.value.trim(),enabled:enabled.value==='true'});
       await loadView();message('收款设置已保存');
     }catch(e){message(e.message);}finally{save.disabled=false;}});
-    const prices=section('单曲价格','只有已发布且启用购买的作品才会显示购买按钮；作品原本的在线播放保持开放。');
+    const prices=section('单曲价格','统一作品库提供曲目信息；销售开关与公开聆听分别管理，已购订单和交付资格保留。');
     for(const work of data.works){const card=node('article','','admin-order'),info=node('div');
       info.append(node('h3',work.title),node('p',`${work.artistName} · ${work.id}`));
       const editor=node('form'),amount=formField(editor,'售价（元）','price','number');amount.min='.01';amount.max='1000000';amount.step='.01';amount.value=work.priceFen?(work.priceFen/100).toFixed(2):'';
@@ -213,13 +213,13 @@
       card.append(info,form);artists.append(card);
     }
     if(!artistData.artists?.length)artists.append(node('p','尚无艺术家申请。','admin-empty'));
-    const works=section('音乐作品', 'A1、A2 上传后先审核；A3–A5 与管理员通过绿色通道直接发布，随后在此完成后置审核。');
-    const studio=node('a','进入艺术家工作室上传作品 ↗','admin-link');studio.href='/music/studio/';works.append(studio);
+    const works=section('音乐作品', '作品上传、编辑和审核已统一到 Player 后台；本页继续保留艺术家资料、价格、停售和订单管理。');
+    const studio=node('a','进入统一作品后台 ↗','admin-link');studio.href='/player/admin';works.append(studio);
     for(const item of workData.works||[]){
       const card=node('article','','admin-order'),info=node('div');
       info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.creatorRole==='admin'?'JUNAF 官方':item.artistLevel||'艺术家'} · ${item.genre} · ${workReviewLabel(item)}`),reviewPlayer(item));
       if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
-      const form=node('form');reviewForm(form,item,(id,body)=>musicApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
+      const form=node('div');if(item.canonicalWorkId){const manage=node('a','编辑与审核此作品 ↗','admin-link');manage.href='/player/admin';form.append(manage);}else reviewForm(form,item,(id,body)=>musicApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
       card.append(info,form);works.append(card);
     }
     if(!workData.works?.length)works.append(node('p','尚无上传作品。','admin-empty'));
