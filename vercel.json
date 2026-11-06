@@ -18,6 +18,10 @@
       "destination": "https://api.junaf.com/player"
     },
     {
+      "source": "/player/",
+      "destination": "https://api.junaf.com/player"
+    },
+    {
       "source": "/player/:path*",
       "destination": "https://api.junaf.com/player/:path*"
     }
