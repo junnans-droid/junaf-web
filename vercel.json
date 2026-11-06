@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/p",
+      "destination": "/player",
+      "permanent": true
+    },
+    {
+      "source": "/p/:path*",
+      "destination": "/player/:path*",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/player",
+      "destination": "https://api.junaf.com/player"
+    },
+    {
+      "source": "/player/:path*",
+      "destination": "https://api.junaf.com/player/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/player/api/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ]
+    }
+  ]
+}
