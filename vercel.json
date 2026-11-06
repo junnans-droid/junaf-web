@@ -10,9 +10,48 @@
       "source": "/p/:path*",
       "destination": "/player/:path*",
       "permanent": true
+    },
+    {
+      "source": "/music/studio",
+      "destination": "/artist/",
+      "permanent": false
+    },
+    {
+      "source": "/music/studio/",
+      "destination": "/artist/",
+      "permanent": false
+    },
+    {
+      "source": "/music/studio/index.html",
+      "destination": "/artist/",
+      "permanent": false
     }
   ],
   "rewrites": [
+    {
+      "source": "/account",
+      "destination": "https://api.junaf.com/player/account"
+    },
+    {
+      "source": "/account/",
+      "destination": "https://api.junaf.com/player/account/"
+    },
+    {
+      "source": "/account/:path*",
+      "destination": "https://api.junaf.com/player/account/:path*"
+    },
+    {
+      "source": "/artist",
+      "destination": "https://api.junaf.com/player/artist"
+    },
+    {
+      "source": "/artist/",
+      "destination": "https://api.junaf.com/player/artist/"
+    },
+    {
+      "source": "/artist/:path*",
+      "destination": "https://api.junaf.com/player/artist/:path*"
+    },
     {
       "source": "/player",
       "destination": "https://api.junaf.com/player"
@@ -33,6 +72,32 @@
         {
           "key": "Cache-Control",
           "value": "private, no-store"
+        }
+      ]
+    },
+    {
+      "source": "/account",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/account/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
         }
       ]
     }
