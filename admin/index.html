@@ -8,10 +8,10 @@
   <title>JUNAF 后台</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/admin/style.css?v=20261004-4">
-</head>
+<style>[hidden]{display:none!important}.admin-shell:not(.admin-authenticated){grid-template-columns:minmax(0,1fr)}.admin-shell:not(.admin-authenticated) .admin-workspace{max-width:44rem;width:100%;margin:auto}.admin-login form{display:grid;gap:1rem}.admin-login label{display:grid;gap:.5rem}.admin-login input{font:inherit;width:100%;box-sizing:border-box;padding:.8rem;border:1px solid #aaa;background:#f6f3eb;color:#171814}.admin-login button{font:inherit;padding:.8rem 1rem;background:#171814;color:#f6f3eb;border:0;cursor:pointer}.admin-login code{display:block;overflow-wrap:anywhere;white-space:pre-wrap;user-select:all;padding:.8rem;background:#f6f3eb;color:#171814}.admin-login small{line-height:1.6}#admin-logout{margin-left:1rem}#admin-login-message{color:#a42a17}</style></head>
 <body class="admin-shell">
   <a class="skip" href="#workspace">跳至后台内容</a>
-  <aside class="admin-sidebar" aria-label="后台导航">
+  <aside hidden data-admin-protected class="admin-sidebar" aria-label="后台导航">
     <a class="admin-brand" href="/">JUNAF<span>.</span><small>CONTROL</small></a>
     <p class="admin-caption">一种语言，多个方向。<br>从这里观察并管理 JUNAF。</p>
     <nav id="admin-nav">
@@ -35,12 +35,12 @@
     <div class="admin-sidebar-foot"><a href="/">返回网站 ↗</a><a href="/account/">用户中心 ↗</a></div>
   </aside>
   <main id="workspace" class="admin-workspace">
-    <div class="admin-topline"><span>JUNAF / ADMINISTRATION</span><span id="admin-identity">正在核验身份</span></div>
-    <section class="admin-intro"><span id="view-index">01 / OVERVIEW</span><h1 id="view-title">整体概览</h1><p id="view-description">音乐、视频、思考与工具，共享 JUNAF 的设计语言。</p></section>
+    <div class="admin-topline"><span>JUNAF / ADMINISTRATION</span><span><span id="admin-identity">未登录</span><button id="admin-logout" hidden type="button">退出后台</button></span></div>
+    <section hidden data-admin-protected class="admin-intro"><span id="view-index">01 / OVERVIEW</span><h1 id="view-title">整体概览</h1><p id="view-description">音乐、视频、思考与工具，共享 JUNAF 的设计语言。</p></section>
     <p id="admin-message" role="status">正在连接 JUNAF 后台…</p>
-    <div id="admin-login" class="admin-login" hidden><h2>需要管理员身份</h2><p>请先使用 JUNAF 管理员账号登录。</p><a href="/account/">前往登录 →</a></div>
-    <div id="admin-content" aria-live="polite"></div>
+    <div id="admin-login" class="admin-login"><h2>管理员登录</h2><p>后台独立验证身份，登录状态保留 30 天。</p><form id="admin-password-form"><label>管理员邮箱<input name="email" type="email" autocomplete="username" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label><button type="submit">下一步 · 验证身份</button></form><form id="admin-otp-form" hidden><p id="admin-otp-instructions"></p><div id="admin-enrollment" hidden><p>在验证器中新建账户，选择“输入设置密钥”：账户为管理员邮箱，类型选基于时间。</p><code id="admin-setup-secret"></code><small>密钥仅用于绑定验证器，不会在登录后再次显示。</small></div><label>验证器六位码<input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="16" placeholder="输入当前六位动态码"></label><small>无法使用验证器时，可输入一条已保存的恢复码。</small><button type="submit">验证并登录</button><button id="admin-restart" type="button">返回账号登录</button></form><div id="admin-recovery" hidden><h3>请保存恢复码</h3><p>每条仅可使用一次；仅在本次绑定成功后显示。</p><code id="admin-recovery-codes"></code><button id="admin-recovery-done" type="button">我已保存，进入后台</button></div><p id="admin-login-message" role="status"></p></div>
+    <div id="admin-content" data-admin-protected hidden aria-live="polite"></div>
   </main>
-  <script src="/admin/admin.js?v=20261004-8" defer></script>
+  <script src="/admin/admin.js?v=20261107-mfa1" defer></script>
 </body>
 </html>
