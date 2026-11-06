@@ -30,6 +30,7 @@
     });
     const data = await response.json();
     if (!response.ok || !data.ok) { if(data.loginUrl) location.assign('/player/account'); throw Error(data.message || '请求失败'); }
+    if(data.playerTicket){const current=await fetch('/player/api/auth/me',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json());const exchanged=await fetch('/player/api/auth/exchange',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(current.csrf?{'X-CSRF-Token':current.csrf}:{})},body:JSON.stringify({ticket:data.playerTicket})});if(!exchanged.ok)throw Error('共享登录未完成，请前往统一个人中心登录');}
     return data;
   }
   async function shop(path, storeId, method = 'GET', body) {
