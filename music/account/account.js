@@ -29,7 +29,7 @@
       signal: AbortSignal.timeout(10000)
     });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw Error(data.message || '请求失败');
+    if (!response.ok || !data.ok) { if(data.loginUrl) location.assign('/player/account'); throw Error(data.message || '请求失败'); }
     return data;
   }
   async function shop(path, storeId, method = 'GET', body) {
@@ -137,6 +137,7 @@
     $('#account-name').textContent = data.account.displayName || data.account.email;
     $('#admin-entry').hidden = data.isAdmin !== true;
     message('已登录 JUNAF');
+    if(!document.querySelector('#player-account-entry')){const link=document.createElement('a');link.id='player-account-entry';link.href='/player/account';link.textContent='账户资料、修改密码与账号关联 ↗';$('#account-name').after(link);}
     window.dispatchEvent(new Event('junaf:account-ready'));
   }
   async function showSignedOut() {
@@ -144,7 +145,8 @@
     $('#signed-out').hidden = false;
     try {
       const config = await request('/config');
-      $('#registration').hidden = !config.registrationEnabled;
+      $('#registration').hidden = true;
+      if(!document.querySelector('#unified-account-entry')){const link=document.createElement('a');link.id='unified-account-entry';link.href='/player/account'+(new URLSearchParams(location.search).has('work')?'?purchase='+encodeURIComponent(new URLSearchParams(location.search).get('work')):'');link.textContent='统一登录 / 注册 / 个人音乐库 →';$('#signed-out').prepend(link);}
     } catch { $('#registration').hidden = true; }
   }
   $('#send-email-code').addEventListener('click', async event => {
