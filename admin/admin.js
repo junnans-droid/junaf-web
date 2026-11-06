@@ -3,6 +3,10 @@
   const origin = ['localhost', '127.0.0.1'].includes(location.hostname)
     ? 'http://127.0.0.1:3100' : 'https://api.junaf.com';
   const $ = selector => document.querySelector(selector);
+  let adminAuthenticated=false,challenge='';
+  function lock(){adminAuthenticated=false;document.body.classList.remove('admin-authenticated');document.querySelectorAll('[data-admin-protected]').forEach(e=>e.hidden=true);$('#admin-content').replaceChildren();$('#admin-login').hidden=false;$('#admin-logout').hidden=true;$('#admin-identity').textContent='未登录';}
+  function unlock(email){adminAuthenticated=true;document.body.classList.add('admin-authenticated');document.querySelectorAll('[data-admin-protected]').forEach(e=>e.hidden=false);$('#admin-login').hidden=true;$('#admin-logout').hidden=false;$('#admin-identity').textContent=email;}
+  async function adminAuth(path,body){const response=await fetch(origin+'/api/auth/admin-'+path,{method:body?'POST':'GET',credentials:'include',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok||!data.ok)throw Object.assign(Error(data.message||'后台验证失败'),{status:response.status});return data;}
   const views = {
     overview: ['01 / OVERVIEW', '整体概览', '以设计语言为核心：确定构建方向，形成方法，借助 Tools 呈现音乐、视觉与思考作品。'],
     music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
@@ -434,6 +438,7 @@
     }
   }
   async function loadView() {
+    if(!adminAuthenticated)return;
     const view = Object.hasOwn(views, location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
     const [index, title, description] = views[view];
     $('#view-index').textContent = index;
@@ -459,18 +464,17 @@
       message('已更新');
     } catch (error) {
       $('#admin-content').replaceChildren();
-      $('#admin-login').hidden = error.status !== 403 && error.status !== 401;
+      if(error.status===403||error.status===401)lock();
       message(error.status === 403 || error.status === 401 ? '请使用 JUNAF 管理员账号登录。' : error.message);
     }
   }
-  async function loadIdentity() {
-    try {
-      const response = await fetch(`${origin}/api/auth/me`, {credentials: 'include', cache: 'no-store'});
-      const data = await response.json();
-      $('#admin-identity').textContent = data.ok ? data.account.email : '未登录';
-    } catch {$('#admin-identity').textContent = '身份暂不可用';}
-  }
+  async function loadIdentity(){lock();try{const data=await adminAuth('me');unlock(data.account.email);await loadView();}catch(e){message(e.status===401?'请登录后台。':e.message);}}
+  function restart(){challenge='';$('#admin-otp-form').hidden=true;$('#admin-enrollment').hidden=true;$('#admin-setup-secret').textContent='';$('#admin-recovery').hidden=true;$('#admin-recovery-codes').textContent='';$('#admin-password-form').hidden=false;$('#admin-otp-form').reset();}
+  $('#admin-password-form').addEventListener('submit',async event=>{event.preventDefault();const formElement=event.currentTarget,button=event.submitter;button.disabled=true;$('#admin-login-message').textContent='正在验证账号…';try{const form=new FormData(formElement),data=await adminAuth('login',Object.fromEntries(form));challenge=data.challenge;formElement.reset();$('#admin-password-form').hidden=true;$('#admin-otp-form').hidden=false;$('#admin-enrollment').hidden=!data.setup;$('#admin-setup-secret').textContent=data.secret||'';$('#admin-otp-instructions').textContent=data.setup?'首次登录：绑定验证器，并输入其当前六位码确认。':'请输入验证器当前六位码。';$('#admin-login-message').textContent='';$('#admin-otp-form [name=code]').focus();}catch(e){$('#admin-login-message').textContent=e.message;}finally{button.disabled=false;}});
+  $('#admin-otp-form').addEventListener('submit',async event=>{event.preventDefault();const formElement=event.currentTarget,button=event.submitter;button.disabled=true;try{const code=new FormData(formElement).get('code'),data=await adminAuth('verify',{challenge,code});$('#admin-setup-secret').textContent='';$('#admin-enrollment').hidden=true;$('#admin-otp-form').reset();$('#admin-login-message').textContent='';if(data.recoveryCodes){$('#admin-otp-form').hidden=true;$('#admin-recovery').hidden=false;$('#admin-recovery-codes').textContent=data.recoveryCodes.join('\n');}else await loadIdentity();}catch(e){$('#admin-login-message').textContent=e.message;}finally{button.disabled=false;}});
+  $('#admin-restart').addEventListener('click',restart);
+  $('#admin-recovery-done').addEventListener('click',async()=>{restart();await loadIdentity();});
+  $('#admin-logout').addEventListener('click',async()=>{try{await adminAuth('logout',{});lock();restart();message('已退出后台。');}catch(e){message(e.message);}});
   window.addEventListener('hashchange', loadView);
   loadIdentity();
-  loadView();
 })();
