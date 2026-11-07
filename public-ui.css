@@ -1,0 +1,13 @@
+/* JUNAF public page details */
+.hero .orbit{border-color:rgba(23,24,20,.39)}
+.hero .orbit::before{border-color:rgba(23,24,20,.22)}
+.music-hero .music-orbit,.music-hero .music-orbit i{border-color:rgba(234,231,222,.28)}
+.music-filters{gap:.8rem 1rem}
+.music-filters :is(input,select){min-height:44px;min-width:0;border-radius:5px;border-color:#a4a398;background:#f1eee6}
+.music-filters :is(input,select):focus-visible,.music-work a:focus-visible{outline:2px solid #a93822;outline-offset:3px}
+.music-work{border-top-color:rgba(23,24,20,.16)}
+.music-work :is(button,.music-play){border-radius:5px}
+@media(max-width:540px){
+ .music-filters label{flex:1 1 100%;min-width:0}
+ .music-filters :is(input,select){width:100%}
+}

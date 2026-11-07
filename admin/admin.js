@@ -257,7 +257,20 @@
   }
   async function renderVideo() {
     const [artists,works]=await Promise.all([videoApi('/artists'),videoApi('/works')]);
+    const videos=section('视频作品','A1、A2 上传后先审核；A3–A5 与管理员直接发布，随后在此完成后置审核。');
+    videos.classList.add('admin-video-list');
+    const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
+    for(const item of works.works||[]){
+      const card=node('article','','admin-order'),info=node('div');
+      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.creatorRole==='admin'?'JUNAF 官方':item.artistLevel||'艺术家'} · ${item.category} · ${workReviewLabel(item)}`));
+      const video=document.createElement('video');video.controls=true;video.preload='metadata';video.className='admin-video-preview';video.src=`${origin}${item.videoUrl}`;info.append(video);
+      if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
+      const form=node('form');reviewForm(form,item,(id,body)=>videoApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
+      card.append(info,form);videos.append(card);
+    }
+    if(!works.works?.length)videos.append(node('p','尚无视频投稿。','admin-empty'));
     const area=section('视频上传额度','沿用已批准的 JUNAF 艺术家身份；视频每日额度与音乐分开计算，默认 3 部。');
+    area.classList.add('admin-quota-list');
     for(const item of artists.artists||[]){
       const card=node('article','','admin-order'),info=node('div');info.append(node('h3',item.name),node('p',`${item.status} · ${item.level} · ${item.id}`));
       const form=node('form'),limit=formField(form,'每日视频上传数量','limit','number');limit.min='0';limit.max='1000';limit.step='1';limit.value=String(item.dailyVideoLimit);const button=node('button','保存额度 →');button.type='submit';form.append(button);
@@ -265,17 +278,6 @@
       card.append(info,form);area.append(card);
     }
     if(!artists.artists?.length)area.append(node('p','尚无艺术家。请在音乐管理中审批艺术家申请。','admin-empty'));
-    const videos=section('视频作品','A1、A2 上传后先审核；A3–A5 与管理员直接发布，随后在此完成后置审核。');
-    const studio=node('a','进入视频工作室 ↗','admin-link');studio.href='/video/studio/';videos.append(studio);
-    for(const item of works.works||[]){
-      const card=node('article','','admin-order'),info=node('div');
-      info.append(node('h3',item.title),node('p',`${item.artistName} · ${item.creatorRole==='admin'?'JUNAF 官方':item.artistLevel||'艺术家'} · ${item.category} · ${workReviewLabel(item)}`));
-      const video=document.createElement('video');video.controls=true;video.preload='metadata';video.style.maxWidth='320px';video.src=`${origin}${item.videoUrl}`;info.append(video);
-      if(item.reviewNote)info.append(node('p',`审核说明：${item.reviewNote}`));
-      const form=node('form');reviewForm(form,item,(id,body)=>videoApi(`/works/${encodeURIComponent(id)}`,'PATCH',body));
-      card.append(info,form);videos.append(card);
-    }
-    if(!works.works?.length)videos.append(node('p','尚无视频投稿。','admin-empty'));
   }
   async function thinkingApi(path,method='GET',body){
     const response=await fetch(`${origin}/api/thinking/admin${path}`,{method,credentials:'include',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});

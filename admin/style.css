@@ -16,3 +16,32 @@
 @media(max-width:480px){.admin-directions{grid-template-columns:1fr 1fr}.admin-direction{min-height:9rem}.admin-metrics{gap:.5rem}}
 
 .admin-audio{display:flex;align-items:center;gap:.65rem;max-width:34rem;margin:1rem 0}.admin-audio audio{display:none}.admin-audio button{flex:none;width:2.5rem;padding:.55rem 0}.admin-audio span{white-space:nowrap;font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}.admin-audio input[type=range]{flex:1;min-width:3rem;accent-color:var(--red);cursor:pointer}.admin-audio input[type=range]:disabled{opacity:.45}
+
+/* JUNAF admin surfaces and controls */
+.admin-shell{--line:rgba(23,24,20,.18);--admin-control-border:#a5a499;--admin-panel:#f2efe7}
+.admin-shell .admin-workspace :is(input:not([type=range]),select,textarea,button){border-radius:5px}
+.admin-shell .admin-workspace :is(input:not([type=range]),select,textarea){background:var(--admin-panel);border-color:var(--admin-control-border)}
+.admin-shell .admin-workspace :is(button,select){min-height:40px}
+.admin-shell .admin-workspace :focus-visible{outline:2px solid #a93822;outline-offset:3px}
+.admin-sidebar :focus-visible{outline:2px solid #ff8b6e;outline-offset:2px}
+#admin-nav a{border-radius:5px}
+#admin-nav span{color:#a5a69e}
+.admin-intro{padding:2.75rem 0 1.75rem}
+.admin-intro h1{font-size:clamp(2.4rem,5vw,4.5rem);margin:.65rem 0 .8rem}
+.admin-intro p{font-size:.9rem}
+.admin-login{background:var(--admin-panel);border:1px solid var(--line);border-radius:6px}
+.admin-direction{background:var(--admin-panel);min-height:9.5rem;border-top:1px solid var(--line)}
+.admin-direction:hover{background:#dfdcd2}
+.admin-table th,.admin-table td{padding:.75rem .85rem .75rem 0}
+.admin-table tbody tr:hover{background:rgba(23,24,20,.035)}
+.admin-order{gap:clamp(1rem,3vw,2rem);padding:1.35rem 0}
+.admin-video-list .admin-link{margin:0 0 1.25rem}
+.admin-video-preview{display:block;width:min(100%,32rem);height:auto;max-height:55vh;background:var(--ink);border-radius:5px;margin-top:.8rem}
+.admin-video-list .admin-order form{align-self:start;padding:1rem;background:var(--admin-panel);border:1px solid var(--line);border-radius:6px}
+.admin-video-list .admin-order form :is(input,select,textarea){width:100%}
+.admin-quota-list .admin-order form{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+@media(max-width:760px){
+ .admin-topline{flex-wrap:wrap}
+ .admin-order h3{overflow-wrap:anywhere}
+ .admin-video-list .admin-order form{padding:.85rem}
+}
