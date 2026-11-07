@@ -1,16 +1,43 @@
 .writing-page{background:var(--paper);color:var(--ink)}
-.writing-hero{padding:9rem max(5vw,1.5rem) 3rem;border-bottom:1px solid var(--line)}
-.writing-hero h1{font-size:clamp(3.3rem,7vw,7rem);line-height:1.05;font-weight:400;letter-spacing:-.055em;margin:2rem 0}
-.writing-hero h1 em{font-style:normal}.writing-hero p{max-width:42rem;color:var(--muted);line-height:1.85}
-.writing-layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(320px,1.3fr);gap:3.5rem;padding:4rem max(5vw,1.5rem)}
-.writing-input,.writing-output{min-width:0}.writing-input .kicker,.writing-output .kicker{margin-bottom:2rem}
-.writing-input label,.writing-output label{display:block;margin:1.4rem 0 .55rem;font-size:.76rem;letter-spacing:.1em}
-.writing-input textarea,.writing-output textarea,.writing-input select{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:0;padding:1rem;background:transparent;color:var(--ink);font:inherit;line-height:1.7}
-.writing-input textarea:focus,.writing-output textarea:focus,.writing-input select:focus{outline:2px solid var(--red);outline-offset:2px}
-.writing-output textarea{min-height:31rem;resize:vertical}.writing-actions{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1.3rem}
-.writing-actions button{border:1px solid var(--ink);background:transparent;color:var(--ink);padding:.85rem 1rem;cursor:pointer;font:inherit;font-size:.82rem}
-.writing-actions button:first-child{background:var(--ink);color:var(--paper)}.writing-actions button:hover,.writing-actions button:focus-visible{background:var(--red);border-color:var(--red);color:#fff}
-.writing-actions button:disabled{opacity:.55;cursor:wait}.writing-hint{font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:1rem}
-#status{min-height:1.5rem;color:var(--red);font-size:.82rem}.writing-studio-link{display:inline-block;margin-top:1.4rem;color:var(--ink);text-underline-offset:.3em}
-.writing-foot{border-top:1px solid var(--line);display:flex;justify-content:space-between;padding:2rem max(5vw,1.5rem);font-size:.8rem}.writing-foot a{color:var(--ink)}
-@media(max-width:760px){.writing-hero{padding-top:7rem}.writing-layout{grid-template-columns:1fr;gap:2rem;padding-top:2.5rem}.writing-output textarea{min-height:24rem}.writing-foot{gap:1rem;flex-wrap:wrap}}
+.writing-hero{padding:clamp(6.75rem,11vw,9rem) var(--g) clamp(1.5rem,4vw,3.4rem)}
+.writing-hero h1{font-size:clamp(2.5rem,6.7vw,6.4rem);line-height:1.07;font-weight:400;letter-spacing:-.055em;margin:1.25rem 0}
+.writing-hero h1 em{font-style:normal}
+.writing-hero p{max-width:42rem;color:var(--muted);line-height:1.75;margin:0}
+.writing-layout{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);align-items:start;
+ gap:clamp(1rem,3vw,2.5rem);padding:0 var(--g) clamp(2.5rem,6vw,5rem);
+}
+.writing-input,.writing-output{
+ min-width:0;padding:clamp(1rem,2.6vw,2rem);
+ border:1px solid #ceccc1;border-radius:6px;background:#f2efe7;
+}
+.writing-input .kicker,.writing-output .kicker{margin-bottom:1.25rem;border-color:#ceccc1;gap:.65rem}
+.writing-input label,.writing-output label{display:block;margin:0 0 .45rem;font-size:.8rem;color:#50534a}
+.writing-input textarea,.writing-output textarea,.writing-input select{
+ display:block;width:100%;min-width:0;min-height:44px;padding:.7rem .8rem;
+ border:1px solid #a5a499;border-radius:5px;background:#f8f5ed;color:var(--ink);font:inherit;line-height:1.65;
+}
+.writing-input textarea,.writing-output textarea{resize:vertical}
+.writing-output textarea{min-height:22rem}
+.writing-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;margin-top:1.1rem}
+.writing-settings>div{min-width:0}
+.writing-actions{display:flex;flex-wrap:wrap;gap:.55rem;margin-top:1rem}
+.writing-actions button{
+ min-height:44px;border:1px solid #a5a499;border-radius:5px;background:transparent;
+ color:var(--ink);padding:.55rem .85rem;cursor:pointer;font:inherit;font-size:.85rem;
+}
+.writing-input .writing-actions button[type=submit]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.writing-actions button:not(:disabled):hover{border-color:#a93822;color:#a93822}
+.writing-input .writing-actions button[type=submit]:hover{background:#a93822;color:#fff}
+.writing-actions button:disabled{opacity:.55;cursor:default}
+.writing-page main :focus-visible{outline:2px solid #a93822;outline-offset:3px}
+.writing-hint{font-size:.78rem;color:var(--muted);line-height:1.65;margin:1rem 0 0}
+.writing-output #status{min-height:1.4rem;color:#a93822;font-size:.82rem;margin:.55rem 0 0}
+.writing-studio-link{display:inline-block;margin-top:.8rem;color:var(--ink);text-underline-offset:.3em}
+.writing-foot{border-top:1px solid #ceccc1;display:flex;justify-content:space-between;padding:1.25rem var(--g);font-size:.8rem}
+.writing-foot a{color:var(--ink)}
+@media(max-width:760px){
+ .writing-layout{grid-template-columns:minmax(0,1fr)}
+ .writing-output textarea{min-height:16rem}
+ .writing-foot,.writing-hero .kicker{gap:1rem;flex-wrap:wrap}
+}
