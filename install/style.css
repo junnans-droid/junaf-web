@@ -1,0 +1,27 @@
+:root{color-scheme:light;font-family:system-ui,-apple-system,"PingFang SC",sans-serif;background:#eae7de;color:#171914;line-height:1.65}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0}
+main{max-width:1100px;margin:auto;padding:0 clamp(16px,5vw,64px)}
+nav,footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 0}
+nav{border-bottom:1px solid #c5c3b9}
+a{color:inherit;text-underline-offset:4px}
+.brand{font-size:24px;font-weight:800;letter-spacing:-.05em;text-decoration:none}
+.brand span{color:#a93822}
+.hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(16px,4vw,42px);align-items:start;padding:clamp(24px,5vw,60px);margin:clamp(24px,5vw,52px) 0 32px;background:#f2efe7;border:1px solid #ceccc1;border-radius:6px}
+.hero img{border-radius:16px}
+.eyebrow{font-size:11px;letter-spacing:.13em;color:#56594e;margin:0}
+h1{font-size:clamp(36px,7vw,80px);font-weight:500;line-height:1.1;letter-spacing:-.05em;margin:8px 0 12px}
+h2{font-size:24px;font-weight:500}
+h3{font-size:20px;font-weight:550;margin:6px 0}
+p{margin:10px 0;color:#505347}
+button{min-height:44px;padding:8px 18px;font:inherit;color:#f2efe7;background:#171914;border:1px solid #171914;border-radius:5px;cursor:pointer}
+button:hover{background:#a93822;border-color:#a93822}
+:focus-visible{outline:2px solid #a93822;outline-offset:3px}
+#install-status:empty{display:none}
+.guides{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.guide{border-top:1px solid #bcbab0;padding:14px 2px}
+.guide[data-current=true]{border-top-color:#a93822}
+.guide p,footer{font-size:14px}
+footer{border-top:1px solid #c5c3b9;margin-top:20px;color:#505347}
+@media(max-width:640px){.hero{grid-template-columns:1fr}.hero img{width:64px;height:64px}.guides{grid-template-columns:1fr}}
