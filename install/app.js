@@ -1,5 +1,6 @@
 (() => {
- if('serviceWorker' in navigator)navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+ const {appName='JUNAF',worker='/service-worker.js'}=document.body.dataset;
+ if('serviceWorker' in navigator)navigator.serviceWorker.register(worker).catch(()=>{});
  const button=document.querySelector('#install-button');
  if(!button)return;
  const status=document.querySelector('#install-status');
@@ -10,7 +11,7 @@
  let prompt;
  const showInstalled=()=>{
   button.hidden=true;
-  status.textContent='你已在 JUNAF 网页应用中。';
+  status.textContent=`你已在 ${appName} 网页应用中。`;
  };
  if(standalone.matches||navigator.standalone)showInstalled();
  window.addEventListener('beforeinstallprompt',event=>{
@@ -27,10 +28,10 @@
   try{
    await current.prompt();
    const {outcome}=await current.userChoice;
-   if(outcome==='accepted')status.textContent='已确认安装，请在设备的应用列表中打开 JUNAF。';
+   if(outcome==='accepted')status.textContent=`已确认安装，请在设备的应用列表中打开 ${appName}。`;
    else status.textContent='可随时通过浏览器菜单再次安装。';
   }catch{
-   status.textContent='请通过浏览器菜单安装 JUNAF。';
+   status.textContent=`请通过浏览器菜单安装 ${appName}。`;
   }
  });
  window.addEventListener('appinstalled',showInstalled);

@@ -1,0 +1,26 @@
+{
+  "id": "/admin/",
+  "name": "JUNAF 后台",
+  "short_name": "JUNAF 后台",
+  "lang": "zh-CN",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#eae7de",
+  "theme_color": "#233956",
+  "description": "JUNAF 总后台管理入口。",
+  "icons": [
+    {
+      "src": "/admin/install/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin/install/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
