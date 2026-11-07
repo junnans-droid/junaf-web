@@ -7,3 +7,15 @@ header.junaf-account-header .header-note{display:none}header#header.junaf-accoun
 @media(max-width:600px){.junaf-account-trigger{max-width:125px;font-size:12px!important}.junaf-account-trigger span{max-width:80px}header.junaf-account-header:not(#header){display:flex;flex-wrap:wrap;flex-direction:row;align-items:center}header.junaf-account-header:not(#header)>nav{order:3;flex-basis:100%;width:100%}header.junaf-account-header:not(#header)>.junaf-account-host{margin-left:auto;align-self:center}header.topbar.junaf-account-header .tool-name{display:none}}
 
 .junaf-unread{flex:none;min-width:1.35em;padding:0 4px;border-radius:2px;background:#b93820;color:white;font-size:11px;line-height:1.5;text-align:center}.junaf-unread[hidden]{display:none!important}
+
+/* Shared account controls, on both light and dark page headers. */
+.junaf-account-trigger{border-radius:5px;border-color:#929489!important;background:#f0ede5!important}
+.junaf-account-trigger>span{min-width:0}
+.junaf-account-trigger:hover,.junaf-account-trigger[aria-expanded="true"]{background:#e1ddd3!important;color:#171814!important}
+.junaf-account-panel{border-radius:6px;border-color:#c2c1b5;box-shadow:0 8px 22px #17181416;padding:8px}
+.junaf-account-panel a,.junaf-account-panel button{border-radius:5px}
+.junaf-account-host :focus-visible{outline-color:#b93820}
+
+:is(.music-page,.video-page,.thinking-page) #header:not(.scrolled) .junaf-account-trigger{background:#24251f!important;color:#f0ede5!important;border-color:#77786d!important}
+:is(.music-page,.video-page,.thinking-page) #header:not(.scrolled) .junaf-account-trigger:is(:hover,[aria-expanded="true"]){background:#34352d!important}
+:is(.music-page,.video-page,.thinking-page) #header:not(.scrolled) .junaf-account-host :focus-visible{outline-color:#ff7957}
