@@ -41,6 +41,6 @@
     <div id="admin-login" class="admin-login"><h2>管理员登录</h2><p>后台独立验证身份，登录状态保留 30 天。</p><form id="admin-password-form" method="post"><label>管理员邮箱<input name="email" type="email" autocomplete="username" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label><button type="submit">下一步 · 验证身份</button></form><form id="admin-otp-form" method="post" hidden><p id="admin-otp-instructions"></p><div id="admin-enrollment" hidden><p>在验证器中新建账户，选择“输入设置密钥”：账户为管理员邮箱，类型选基于时间。</p><code id="admin-setup-secret"></code><small>密钥仅用于绑定验证器，不会在登录后再次显示。</small></div><label>验证器六位码<input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="16" placeholder="输入当前六位动态码"></label><small>无法使用验证器时，可输入一条已保存的恢复码。</small><button type="submit">验证并登录</button><button id="admin-restart" type="button">返回账号登录</button></form><div id="admin-recovery" hidden><h3>请保存恢复码</h3><p>每条仅可使用一次；仅在本次绑定成功后显示。</p><code id="admin-recovery-codes"></code><button id="admin-recovery-done" type="button">我已保存，进入后台</button></div><p id="admin-login-message" role="status"></p></div>
     <div id="admin-content" data-admin-protected hidden aria-live="polite"></div>
   </main>
-  <script src="/admin/admin.js?v=20261107-access-policy" defer></script>
+  <script src="/admin/admin.js?v=20261107-presence" defer></script>
 </body>
 </html>

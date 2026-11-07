@@ -398,15 +398,39 @@
   }
   async function renderAccounts() {
     const data = await api('/accounts');
-    const area = section('JUNAF 用户', '艺术家身份以审核通过为准；级别与作品、视频、思考共用。密码与会话不会出现在后台列表。');
-    table(area, [['邮箱', row => row.email], ['称呼', row => row.name || '—'],
+    if (!adminAuthenticated || location.hash !== '#accounts') return;
+    const area = section('JUNAF 用户', '在线表示近 2 分钟内有有效的统一账号会话活动。列表每 30 秒更新。');
+    const results = node('div');
+    const status = node('p');
+    status.setAttribute('role', 'status');
+    area.append(results, status);
+    const columns = [['邮箱', row => row.email], ['称呼', row => row.name || '—'],
       ['账号状态', row => row.status],
+      ['在线状态', row => row.online === true ? '在线' : row.online === false ? '离线' : '未关联 Player'],
       ['是否艺术家', row => ({approved:'是',pending:'待审核',rejected:'否（未通过）'})[row.artistStatus] || '否'],
       ['级别', row => row.isArtist ? row.artistLevel : '—'],
-      ['创建', row => date(row.createdAt)]],
-    data.accounts || [], '当前没有用户。');
+      ['创建', row => date(row.createdAt)]];
+    function render(accounts) {
+      results.replaceChildren();
+      table(results, columns, accounts, '当前没有用户。');
+    }
+    render(data.accounts || []);
+    let refreshing = false;
+    const timer = setInterval(async () => {
+      if (!area.isConnected || location.hash !== '#accounts') {clearInterval(timer); return;}
+      if (document.hidden || refreshing) return;
+      refreshing = true;
+      try {
+        const fresh = await api('/accounts');
+        if (area.isConnected) {render(fresh.accounts || []); status.textContent = '';}
+      } catch (error) {
+        if (!area.isConnected) return;
+        if (error.status === 401 || error.status === 403) {lock(); message('请重新登录后台。');}
+        else status.textContent = '暂时无法更新在线状态，当前显示上次结果。';
+      } finally {refreshing = false;}
+    }, 30000);
   }
-  async function renderPermissions(){const data=await api('/player/users');const area=section('模块管理员','总后台超级管理员负责授权；模块管理员不能授予自己或他人管理权限。用户需先注册并验证邮箱。');const modules=node('p','已接通：Player。Video、Thinking 的独立授权接口后续接入，当前不授予未实现的权限。');area.append(modules);for(const user of data.users){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',user.displayName),node('p',user.email+' · '+(user.emailVerified?'邮箱已验证':'邮箱待验证')));const form=node('form'),select=formField(form,'Player 权限','player','select');for(const [value,label]of[['false','普通听众'],['true','Player 管理员']]){const o=node('option',label);o.value=value;select.append(o)}select.value=String(user.modulePermissions.includes('player'));const save=node('button','保存模块权限');save.type='submit';form.append(save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{await api('/player/users/'+encodeURIComponent(user.id)+'/permissions','PATCH',{modulePermissions:select.value==='true'?['player']:[]});message('模块权限已保存');}catch(error){message(error.message)}finally{save.disabled=false}});card.append(info,form);area.append(card)}}
+  async function renderPermissions(){const data=await api('/player/users');const area=section('模块管理员','总后台超级管理员负责授权；模块管理员不能授予自己或他人管理权限。用户需先注册并验证邮箱。');const modules=node('p','已接通：Player。Video、Thinking 的独立授权接口后续接入，当前不授予未实现的权限。');area.append(modules);for(const user of data.users){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',user.displayName),node('p',user.email+' · '+(user.emailVerified?'邮箱已验证':'邮箱待验证')+' · '+(user.online === true ? '在线' : user.online === false ? '离线' : '状态未知')));const form=node('form'),select=formField(form,'Player 权限','player','select');for(const [value,label]of[['false','普通听众'],['true','Player 管理员']]){const o=node('option',label);o.value=value;select.append(o)}select.value=String(user.modulePermissions.includes('player'));const save=node('button','保存模块权限');save.type='submit';form.append(save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{await api('/player/users/'+encodeURIComponent(user.id)+'/permissions','PATCH',{modulePermissions:select.value==='true'?['player']:[]});message('模块权限已保存');}catch(error){message(error.message)}finally{save.disabled=false}});card.append(info,form);area.append(card)}}
   async function renderNameRules(){const [data,audit]=await Promise.all([api('/name-policy'),api('/name-audit')]);const area=section('名称禁用规则','按包含匹配，英文忽略大小写，全角字符统一比较。用户名与艺名分别禁止重名；已有名称不自动改动。');const form=node('form'),rows=node('div');let terms=[...data.policy.terms];function draw(){rows.replaceChildren();terms.forEach((term,i)=>{const row=node('div');row.style.cssText='display:flex;gap:10px;margin:8px 0';const input=document.createElement('input');input.value=term;input.maxLength=60;input.required=true;input.setAttribute('aria-label','禁用词 '+(i+1));input.addEventListener('input',()=>terms[i]=input.value);const remove=node('button','删除');remove.type='button';remove.setAttribute('aria-label','删除禁用词 '+term);remove.addEventListener('click',()=>{terms.splice(i,1);draw()});row.append(input,remove);rows.append(row)})}draw();const add=node('button','＋ 新增禁用词');add.type='button';add.addEventListener('click',()=>{terms.push('');draw()});const label=node('label','Player 管理员可使用保留词（仍不允许与他人重名）'),exempt=document.createElement('input');exempt.type='checkbox';exempt.checked=data.policy.exemptAdmins;label.prepend(exempt);const note=node('p','词条过短容易误拦截。规则保存后用于新注册、申请和改名；已有重名需本人另行修改。');const save=node('button','保存名称规则');save.type='submit';form.append(rows,add,label,note,save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{const result=await api('/name-policy','PATCH',{terms:terms.map(v=>v.trim()),exemptAdmins:exempt.checked,revision:data.policy.revision});data.policy=result.policy;message('名称规则已保存');}catch(error){message(error.message)}finally{save.disabled=false}});area.append(form);const duplicates=section('已有重名记录','仅列出，不自动改名或合并账号。');for(const [kind,groups]of[['用户名',audit.displayNames],['艺术家名称',audit.artistNames]]){duplicates.append(node('h3',kind));if(!groups.length)duplicates.append(node('p','没有重名记录'));for(const group of groups)duplicates.append(node('p',group.name+' · '+group.count+' 个账号'))}}
   async function renderSystem() {
     const data = await api('/system');
