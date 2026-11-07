@@ -9,6 +9,7 @@
   async function adminAuth(path,body){const response=await fetch(origin+'/api/auth/admin-'+path,{method:body?'POST':'GET',credentials:'include',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok||!data.ok)throw Object.assign(Error(data.message||'后台验证失败'),{status:response.status});return data;}
   const views = {
     permissions: ['11 / ACCESS', '模块权限', '超级管理员按模块授予或撤销管理权限。'],
+    notices: ['13 / NOTICES', '站内通知', '向全体用户、指定分组或单个用户发送站内通知。'],
     names: ['12 / NAMES', '名称规则', '分别检查用户名与艺术家名称；管理中英文禁用词。'],
     overview: ['01 / OVERVIEW', '整体概览', '以设计语言为核心：确定构建方向，形成方法，借助 Tools 呈现音乐、视觉与思考作品。'],
     music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
@@ -396,6 +397,97 @@
     form.addEventListener('submit', event => {event.preventDefault(); query().catch(error => message(error.message));});
     await query();
   }
+  const noticeGroups = {listeners:'普通听众', artists:'已审核艺术家', A1:'A1 艺术家', A2:'A2 艺术家',
+    A3:'A3 艺术家', A4:'A4 艺术家', A5:'A5 艺术家', 'player-admins':'Player 管理员'};
+  const noticeTarget = target => target.type==='all'?'全体已验证用户':target.type==='single'?target.email:noticeGroups[target.group];
+  async function renderNotices() {
+    const data = await api('/notices');
+    if (!adminAuthenticated || location.hash !== '#notices') return;
+    const area = section('发送站内通知', '通知会送到个人中心的收件箱。仅已验证邮箱的统一账号可以接收。');
+    const form = node('form');
+    const range = formField(form,'收件范围','target','select');
+    for (const [value,label] of [['','请选择收件范围'],['single','指定用户'],['group','按用户分组'],['all','全体已验证用户']]){
+      const option=node('option',label); option.value=value; range.append(option);
+    }
+    range.required=true;
+    const group=formField(form,'用户分组','group','select');
+    for(const [value,label] of Object.entries(noticeGroups)){
+      const option=node('option',label);option.value=value;group.append(option);
+    }
+    const email=formField(form,'用户注册邮箱','email','email');
+    email.maxLength=254;
+    const title=formField(form,'通知标题','title');
+    title.required=true;title.maxLength=100;
+    const body=formField(form,'通知正文','body','textarea');
+    body.required=true;body.maxLength=4000;body.rows=6;
+    const previewButton=node('button','预览收件范围');
+    previewButton.type='submit';
+    const confirmButton=node('button','确认发送');
+    confirmButton.type='button';confirmButton.disabled=true;
+    const feedback=node('p');
+    feedback.setAttribute('role','status');
+    form.append(previewButton,confirmButton,feedback);
+    area.append(form);
+    const history=section('发送记录','显示最近 50 条通知。');
+    const results=node('div');
+    history.append(results);
+    function showHistory(){
+      results.replaceChildren();
+      table(results,[['标题',row=>row.title],['收件范围',row=>noticeTarget(row.target)],['送达人数',row=>row.recipientCount],
+        ['发送时间',row=>date(row.createdAt)],['发送人',row=>row.sender]],data.notices,'尚无发送记录。');
+    }
+    showHistory();
+    let preview=null;
+    function invalidate(){
+      preview=null;confirmButton.disabled=true;feedback.textContent='';
+      group.closest('label').hidden=range.value!=='group';
+      email.closest('label').hidden=range.value!=='single';
+      email.disabled=range.value!=='single';email.required=!email.disabled;
+    }
+    invalidate();
+    form.addEventListener('input',invalidate);
+    form.addEventListener('change',invalidate);
+    const draft=()=>({title:title.value.trim(),body:body.value.trim(),target:range.value==='single'?{type:'single',email:email.value.trim()}
+      :range.value==='group'?{type:'group',group:group.value}:{type:range.value}});
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      invalidate();
+      const current=draft();
+      previewButton.disabled=true;
+      try{
+        const result=await api('/notices/preview','POST',{draft:current});
+        if(JSON.stringify(current)!==JSON.stringify(draft()))return;
+        feedback.textContent=result.recipientCount
+          ?`预计送达 ${result.recipientCount} 人 · ${noticeTarget(current.target)}`
+          :'当前没有符合条件的收件人。';
+        if(result.recipientCount){
+          preview={draft:current,preview:result.preview,requestId:crypto.randomUUID(),count:result.recipientCount};
+          confirmButton.disabled=false;
+        }
+      }catch(error){feedback.textContent=error.message;}
+      finally{previewButton.disabled=false;}
+    });
+    confirmButton.addEventListener('click',async()=>{
+      if(!preview||!window.confirm(`确认向 ${noticeTarget(preview.draft.target)} 发送「${preview.draft.title}」？预计送达 ${preview.count} 人。`))return;
+      const {count,...payload}=preview;
+      const fields=[range,group,email,title,body,previewButton,confirmButton];
+      fields.forEach(field=>field.disabled=true);
+      try{
+        const {notice}=await api('/notices/send','POST',payload);
+        data.notices=[notice,...data.notices.filter(row=>row.id!==notice.id)].slice(0,50);
+        showHistory();
+        form.reset();invalidate();
+        feedback.textContent=`已发送，送达 ${notice.recipientCount} 人。`;
+      }catch(error){
+        if(error.status===400||error.status===409)invalidate();
+        feedback.textContent=error.message;
+      }finally{
+        fields.forEach(field=>field.disabled=false);
+        email.disabled=range.value!=='single';
+        confirmButton.disabled=!preview;
+      }
+    });
+  }
   async function renderAccounts() {
     const data = await api('/accounts');
     if (!adminAuthenticated || location.hash !== '#accounts') return;
@@ -481,6 +573,7 @@
       const overview = await api('/overview');
       $('#admin-login').hidden = true;
       if (view === 'permissions') await renderPermissions();
+      else if (view === 'notices') await renderNotices();
       else if (view === 'names') await renderNameRules();
       else if (view === 'overview') await renderOverview(overview);
       else if (view === 'purchases') await renderPurchases();
