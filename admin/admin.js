@@ -8,6 +8,8 @@
   function unlock(email){adminAuthenticated=true;document.body.classList.add('admin-authenticated');document.querySelectorAll('[data-admin-protected]').forEach(e=>e.hidden=false);$('#admin-login').hidden=true;$('#admin-logout').hidden=false;$('#admin-identity').textContent=email;}
   async function adminAuth(path,body){const response=await fetch(origin+'/api/auth/admin-'+path,{method:body?'POST':'GET',credentials:'include',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});const data=await response.json();if(!response.ok||!data.ok)throw Object.assign(Error(data.message||'后台验证失败'),{status:response.status});return data;}
   const views = {
+    permissions: ['11 / ACCESS', '模块权限', '超级管理员按模块授予或撤销管理权限。'],
+    names: ['12 / NAMES', '名称规则', '分别检查用户名与艺术家名称；管理中英文禁用词。'],
     overview: ['01 / OVERVIEW', '整体概览', '以设计语言为核心：确定构建方向，形成方法，借助 Tools 呈现音乐、视觉与思考作品。'],
     music: ['02 / MUSIC', '作品与艺术家', '审核艺术家申请、管理投稿与每日上传额度。'],
     purchases: ['03 / MUSIC SALES', '作品购买与订单', '设置单曲价格、收款信息，并核对 JUNAF 作品订单。'],
@@ -298,6 +300,7 @@
     const label = node('label', labelText);
     const input = document.createElement(['textarea', 'select'].includes(type) ? type : 'input');
     input.name = name;
+    input.setAttribute('aria-label',labelText);
     if (!['textarea', 'select'].includes(type)) input.type = type;
     label.append(input);
     form.append(label);
@@ -403,6 +406,8 @@
       ['创建', row => date(row.createdAt)]],
     data.accounts || [], '当前没有用户。');
   }
+  async function renderPermissions(){const data=await api('/player/users');const area=section('模块管理员','总后台超级管理员负责授权；模块管理员不能授予自己或他人管理权限。用户需先注册并验证邮箱。');const modules=node('p','已接通：Player。Video、Thinking 的独立授权接口后续接入，当前不授予未实现的权限。');area.append(modules);for(const user of data.users){const card=node('article','','admin-order'),info=node('div');info.append(node('h3',user.displayName),node('p',user.email+' · '+(user.emailVerified?'邮箱已验证':'邮箱待验证')));const form=node('form'),select=formField(form,'Player 权限','player','select');for(const [value,label]of[['false','普通听众'],['true','Player 管理员']]){const o=node('option',label);o.value=value;select.append(o)}select.value=String(user.modulePermissions.includes('player'));const save=node('button','保存模块权限');save.type='submit';form.append(save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{await api('/player/users/'+encodeURIComponent(user.id)+'/permissions','PATCH',{modulePermissions:select.value==='true'?['player']:[]});message('模块权限已保存');}catch(error){message(error.message)}finally{save.disabled=false}});card.append(info,form);area.append(card)}}
+  async function renderNameRules(){const [data,audit]=await Promise.all([api('/name-policy'),api('/name-audit')]);const area=section('名称禁用规则','按包含匹配，英文忽略大小写，全角字符统一比较。用户名与艺名分别禁止重名；已有名称不自动改动。');const form=node('form'),rows=node('div');let terms=[...data.policy.terms];function draw(){rows.replaceChildren();terms.forEach((term,i)=>{const row=node('div');row.style.cssText='display:flex;gap:10px;margin:8px 0';const input=document.createElement('input');input.value=term;input.maxLength=60;input.required=true;input.setAttribute('aria-label','禁用词 '+(i+1));input.addEventListener('input',()=>terms[i]=input.value);const remove=node('button','删除');remove.type='button';remove.setAttribute('aria-label','删除禁用词 '+term);remove.addEventListener('click',()=>{terms.splice(i,1);draw()});row.append(input,remove);rows.append(row)})}draw();const add=node('button','＋ 新增禁用词');add.type='button';add.addEventListener('click',()=>{terms.push('');draw()});const label=node('label','Player 管理员可使用保留词（仍不允许与他人重名）'),exempt=document.createElement('input');exempt.type='checkbox';exempt.checked=data.policy.exemptAdmins;label.prepend(exempt);const note=node('p','词条过短容易误拦截。规则保存后用于新注册、申请和改名；已有重名需本人另行修改。');const save=node('button','保存名称规则');save.type='submit';form.append(rows,add,label,note,save);form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{const result=await api('/name-policy','PATCH',{terms:terms.map(v=>v.trim()),exemptAdmins:exempt.checked,revision:data.policy.revision});data.policy=result.policy;message('名称规则已保存');}catch(error){message(error.message)}finally{save.disabled=false}});area.append(form);const duplicates=section('已有重名记录','仅列出，不自动改名或合并账号。');for(const [kind,groups]of[['用户名',audit.displayNames],['艺术家名称',audit.artistNames]]){duplicates.append(node('h3',kind));if(!groups.length)duplicates.append(node('p','没有重名记录'));for(const group of groups)duplicates.append(node('p',group.name+' · '+group.count+' 个账号'))}}
   async function renderSystem() {
     const data = await api('/system');
     const area = section('服务状态');
@@ -451,7 +456,9 @@
     try {
       const overview = await api('/overview');
       $('#admin-login').hidden = true;
-      if (view === 'overview') await renderOverview(overview);
+      if (view === 'permissions') await renderPermissions();
+      else if (view === 'names') await renderNameRules();
+      else if (view === 'overview') await renderOverview(overview);
       else if (view === 'purchases') await renderPurchases();
       else if (view === 'music') await renderMusic();
       else if (view === 'video') await renderVideo();
