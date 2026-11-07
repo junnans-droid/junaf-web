@@ -601,6 +601,28 @@
   $('#admin-restart').addEventListener('click',restart);
   $('#admin-recovery-done').addEventListener('click',async()=>{restart();await loadIdentity();});
   $('#admin-logout').addEventListener('click',async()=>{try{await adminAuth('logout',{});lock();restart();message('已退出后台。');}catch(e){message(e.message);}});
+  document.addEventListener('click',async event=>{
+    const link=event.target.closest?.('a[href="/player/admin"]');
+    if(!link||!adminAuthenticated)return;
+    event.preventDefault();
+    if(link.getAttribute('aria-disabled')==='true')return;
+    link.setAttribute('aria-disabled','true');
+    message('正在进入 Player 后台…');
+    try{
+      const {ticket}=await api('/player/entry','POST',{});
+      const identity=await fetch('/player/api/auth/me',{cache:'no-store',credentials:'same-origin'});
+      if(!identity.ok)throw Error('无法读取 Player 登录状态');
+      const {csrf}=await identity.json();
+      const response=await fetch('/player/api/auth/admin-exchange',{
+        method:'POST',credentials:'same-origin',cache:'no-store',
+        headers:{'Content-Type':'application/json',...(csrf?{'X-CSRF-Token':csrf}:{})},
+        body:JSON.stringify({ticket})
+      });
+      const result=await response.json();
+      if(!response.ok||!result.ok)throw Error(result.error||'进入 Player 后台失败');
+      location.assign(link.href);
+    }catch(error){message(error.message);link.removeAttribute('aria-disabled');}
+  });
   window.addEventListener('hashchange', loadView);
   loadIdentity();
 })();
